@@ -150,6 +150,26 @@ carb+lean breakfast, fatty dinner.
   macro %, slots: name + meal-cycle chip + archetype chips, ≤6 slots),
   Day/Week(7)/Month(28) horizon, Generate/Regenerate, per-day collapsible
   cards, "Log to <meal>" writes real-servings LogEntries to that plan date.
+- **v2 additions** (same session, user-requested):
+  - Per-slot **meal size %** (`caloriePct`, blank = auto-split of unclaimed
+    %; explicit >100% → normalized + warning) — pre-workout snack use case.
+  - Per-slot **category composition** (`categories[]`): one food from EACH
+    chosen category, leftover calories top up from the same set; archetype
+    only steers (floored at 0.3, never vetoes a user-chosen category);
+    missing category → skipped, meal continues.
+  - **Restricted days** (`restrictedDays[]`: name + weekdays 0-6 + allowed
+    category whitelist) — e.g. Orthodox fast Wed/Fri = plants + Shellfish.
+    Multiple rules on one weekday intersect. Slot categories filtered per
+    day (all filtered out → free pick from allowed pool). Day header shows
+    a restriction badge (PlannedDay.restrictionName). Thin-pool warning.
+  - Same-day food repeats are now a HARD exclusion (fallback pass only if
+    nothing else fits); plan-wide rotation penalty 0.7^uses.
+  - `components2/CategoryPickerModal.tsx`: full-screen multi-select over
+    CATEGORY_ORDER with "+ Plants" / "+ Animal" / Clear quick-sets
+    (ANIMAL_/PLANT_CATEGORIES in constants.ts; quick-sets UNION with
+    current selection). Used by both slots and restriction rules.
+  - Legacy stored settings lack the new fields — all read sites use
+    `?? []` / `?? null`; no storage-key bump needed.
 - Persisted: `plannerSettings`, `mealPlan` keys. AI layer: NOT built yet —
   planned as optional refine layer reusing coach providers ("maybe AI if not
   too demanding" — rules core was the agreed architecture).
