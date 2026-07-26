@@ -21,6 +21,8 @@ export const STORAGE_KEYS = {
   waterGoalOz: `${PREFIX}waterGoalOz`,
   waterCupOz: `${PREFIX}waterCupOz`,
   sleep: `${PREFIX}sleep`,
+  // Daily step-count snapshots (the OS only remembers ~7 days)
+  steps: `${PREFIX}steps`,
   // AI Coach: provider settings + cached suggestions
   coachProvider: `${PREFIX}coachProvider`,
   coachClaudeKey: `${PREFIX}coachClaudeKey`,

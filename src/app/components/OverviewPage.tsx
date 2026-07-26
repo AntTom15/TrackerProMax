@@ -8,6 +8,7 @@ import {
 import { format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
 import { Settings, Flame, Footprints, Droplets, Moon } from './Icons';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
+import { useSteps, StepsByDate } from '../lib/steps';
 import type {
   Food,
   LogEntry,
@@ -23,6 +24,8 @@ interface OverviewPageProps {
     water: Record<string, number>;
     waterGoalOz: number;
     sleep: SleepEntry[];
+    steps: StepsByDate;
+    snapshotSteps: (patch: StepsByDate) => void;
   };
 }
 
@@ -34,9 +37,14 @@ const fmtDur = (mins: number) => {
 
 export default function OverviewPage({ store }: OverviewPageProps) {
   const { c, styles } = useThemedStyles(createStyles);
-  const { foods, log, sessions, water, waterGoalOz, sleep } = store;
+  const { foods, log, sessions, water, waterGoalOz, sleep, steps, snapshotSteps } =
+    store;
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  // ---- Steps: live from the phone's pedometer, snapshotted daily ----
+  const stepsAvailable = useSteps(snapshotSteps);
+  const stepsToday = steps[todayStr];
   const foodById = new Map(foods.map((f) => [f.id, f]));
 
   // ---- Today's diet ----
@@ -144,8 +152,16 @@ export default function OverviewPage({ store }: OverviewPageProps) {
     {
       icon: <Footprints size={18} color="#60a5fa" />,
       label: 'Steps',
-      value: '—',
-      sub: 'Connect Apple Health',
+      value:
+        stepsAvailable && stepsToday != null
+          ? stepsToday.toLocaleString()
+          : '—',
+      sub:
+        stepsAvailable === false
+          ? 'Unavailable on this device'
+          : stepsAvailable && stepsToday != null
+            ? 'From your phone'
+            : 'Reading motion data…',
       color: c.tintBlue,
     },
     {

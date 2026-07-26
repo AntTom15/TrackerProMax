@@ -484,6 +484,12 @@ function useAppStore() {
   const setWaterForDate = (date, oz) =>
     setWater((prev) => ({ ...prev, [date]: Math.max(0, oz) }));
 
+  // ---- Steps (daily totals snapshotted from the phone's pedometer) ----
+  const [steps, setSteps] = usePersistedState(STORAGE_KEYS.steps, {});
+  // patch: { 'yyyy-MM-dd': count, ... } — merged over what's stored so
+  // days older than the OS's ~7-day window keep their snapshot.
+  const snapshotSteps = (patch) => setSteps((prev) => ({ ...prev, ...patch }));
+
   // ---- Sleep log (one entry per wake date) ----
   const [sleep, setSleep] = usePersistedState(STORAGE_KEYS.sleep, []);
   const addSleepEntry = (entry) =>
@@ -573,6 +579,8 @@ function useAppStore() {
     setWaterGoalOz,
     waterCupOz,
     setWaterCupOz,
+    steps,
+    snapshotSteps,
     sleep,
     addSleepEntry,
     deleteSleepEntry,
