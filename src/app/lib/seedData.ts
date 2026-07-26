@@ -62,7 +62,7 @@ const CORE_FOODS: Food[] = [
     uploadedBy: 'MacroMaster',
     upvotes: 1204,
     downvotes: 18,
-    category: 'Dairy & Eggs',
+    category: 'Eggs',
     nutrients: {
       calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8,
       fiber: 0, sugars: 0.2,
@@ -86,7 +86,7 @@ const CORE_FOODS: Food[] = [
     uploadedBy: 'Dietitian_Sara',
     upvotes: 567,
     downvotes: 29,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: {
       calories: 165, protein: 15.0, carbs: 6.8, fat: 8.5,
       fiber: 0, sugars: 6.8,

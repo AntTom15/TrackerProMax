@@ -109,6 +109,10 @@ export const Moon = ({ size = 24, color = '#000' }: IconProps) => (
   <MaterialIcons name="nights-stay" size={size} color={color} />
 );
 
+export const Sun = ({ size = 24, color = '#000' }: IconProps) => (
+  <MaterialIcons name="wb-sunny" size={size} color={color} />
+);
+
 export const HelpCircle = ({ size = 24, color = '#000' }: IconProps) => (
   <MaterialIcons name="help" size={size} color={color} />
 );

@@ -693,7 +693,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'BrothWitch',
     upvotes: 741,
     downvotes: 26,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 150, protein: 7.7, carbs: 11.7, fat: 8, fiber: 0, sugars: 12.3, satFat: 4.6, monoFat: 2, polyFat: 0.5, omega3: 100, omega6: 290, transFat: 0.3, cholesterol: 24, sodium: 105, vitaminA: 112, vitaminB1: 0.11, vitaminB2: 0.41, vitaminB3: 0.22, vitaminB5: 0.88, vitaminB6: 0.09, vitaminB7: 7, vitaminB9: 12, vitaminB12: 1.1, vitaminC: 2, vitaminD: 0.3, vitaminE: 0.2, vitaminK1: 0.7, vitaminK2: 2.4, choline: 34, calcium: 276, chloride: 245, chromium: 1, copper: 0.01, iodine: 85, iron: 0.07, magnesium: 24, manganese: 0.01, molybdenum: 12, phosphorus: 205, potassium: 322, selenium: 9, zinc: 1 },
   },
   {
@@ -704,7 +704,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'BrothWitch',
     upvotes: 81,
     downvotes: 41,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 168, protein: 8.7, carbs: 10.9, fat: 10.1, fiber: 0, sugars: 10.9, satFat: 6.5, monoFat: 2.7, polyFat: 0.4, omega3: 100, omega6: 260, transFat: 0.2, cholesterol: 27, sodium: 122, vitaminA: 139, vitaminB1: 0.12, vitaminB2: 0.34, vitaminB3: 0.68, vitaminB5: 0.76, vitaminB6: 0.11, vitaminB7: 8, vitaminB9: 2, vitaminB12: 0.17, vitaminC: 3.2, vitaminD: 0.3, vitaminE: 0.2, vitaminK1: 0.7, vitaminK2: 2, choline: 39, calcium: 327, chloride: 290, chromium: 1, copper: 0.11, iodine: 74, iron: 0.12, magnesium: 34, manganese: 0.04, molybdenum: 11, phosphorus: 271, potassium: 498, selenium: 3.4, zinc: 0.73 },
   },
   {
@@ -715,7 +715,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'BrothWitch',
     upvotes: 549,
     downvotes: 14,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 103, protein: 0.9, carbs: 0.8, fat: 11, fiber: 0, sugars: 0.9, satFat: 7, monoFat: 2.8, polyFat: 0.5, omega3: 165, omega6: 250, transFat: 0.4, cholesterol: 34, sodium: 8, vitaminA: 124, vitaminB1: 0.01, vitaminB2: 0.06, vitaminB3: 0.02, vitaminB5: 0.11, vitaminB6: 0.01, vitaminB7: 1, vitaminB9: 1, vitaminB12: 0.05, vitaminC: 0.2, vitaminD: 0.5, vitaminE: 0.3, vitaminK1: 1, vitaminK2: 2, choline: 5, calcium: 20, chloride: 15, chromium: 0.2, copper: 0, iodine: 9, iron: 0, magnesium: 2, manganese: 0, molybdenum: 1, phosphorus: 18, potassium: 29, selenium: 0.9, zinc: 0.07 },
   },
   {
@@ -726,7 +726,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'MacroMaster',
     upvotes: 207,
     downvotes: 32,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 102, protein: 0.1, carbs: 0, fat: 11.5, fiber: 0, sugars: 0, satFat: 7.3, monoFat: 3, polyFat: 0.4, omega3: 165, omega6: 250, transFat: 0.5, cholesterol: 31, sodium: 91, vitaminA: 97, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0.02, vitaminB6: 0, vitaminB7: 0.3, vitaminB9: 0.4, vitaminB12: 0.02, vitaminC: 0, vitaminD: 0.2, vitaminE: 0.33, vitaminK1: 1, vitaminK2: 3, choline: 2.6, calcium: 3, chloride: 140, chromium: 0.1, copper: 0, iodine: 4, iron: 0, magnesium: 0.3, manganese: 0, molybdenum: 0.5, phosphorus: 3, potassium: 3, selenium: 0.1, zinc: 0.01 },
   },
   {
@@ -737,7 +737,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'GrassFedGuru',
     upvotes: 808,
     downvotes: 3,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 102, protein: 0.1, carbs: 0, fat: 11.5, fiber: 0, sugars: 0, satFat: 7.3, monoFat: 3, polyFat: 0.4, omega3: 165, omega6: 250, transFat: 0.5, cholesterol: 31, sodium: 2, vitaminA: 97, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0.02, vitaminB6: 0, vitaminB7: 0.3, vitaminB9: 0.4, vitaminB12: 0.02, vitaminC: 0, vitaminD: 0.2, vitaminE: 0.33, vitaminK1: 1, vitaminK2: 3, choline: 2.6, calcium: 3, chloride: 4, chromium: 0.1, copper: 0, iodine: 4, iron: 0, magnesium: 0.3, manganese: 0, molybdenum: 0.5, phosphorus: 3, potassium: 3, selenium: 0.1, zinc: 0.01 },
   },
   {
@@ -748,7 +748,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'BrothWitch',
     upvotes: 285,
     downvotes: 20,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 112, protein: 6.72, carbs: 0.7, fat: 9.24, fiber: 0, sugars: 0.14, satFat: 5.6, monoFat: 2.52, polyFat: 0.336, omega3: 130, omega6: 196, transFat: 0.308, cholesterol: 28, sodium: 182, vitaminA: 86.8, vitaminB1: 0.008, vitaminB2: 0.118, vitaminB3: 0.028, vitaminB5: 0.14, vitaminB6: 0.02, vitaminB7: 0.56, vitaminB9: 5.6, vitaminB12: 0.308, vitaminC: 0, vitaminD: 0.168, vitaminE: 0.196, vitaminK1: 0.672, vitaminK2: 7, choline: 4.76, calcium: 199, chloride: 277.2, chromium: 0.56, copper: 0.008, iodine: 10.64, iron: 0.112, magnesium: 7.56, manganese: 0.008, molybdenum: 2.24, phosphorus: 128.8, potassium: 21.28, selenium: 7.84, zinc: 1.008 },
   },
   {
@@ -759,7 +759,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'PastureLife',
     upvotes: 443,
     downvotes: 43,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 112, protein: 6.72, carbs: 0.7, fat: 9.24, fiber: 0, sugars: 0.14, satFat: 5.6, monoFat: 2.52, polyFat: 0.336, omega3: 130, omega6: 196, transFat: 0.308, cholesterol: 28, sodium: 6, vitaminA: 86.8, vitaminB1: 0.008, vitaminB2: 0.118, vitaminB3: 0.028, vitaminB5: 0.14, vitaminB6: 0.02, vitaminB7: 0.56, vitaminB9: 5.6, vitaminB12: 0.308, vitaminC: 0, vitaminD: 0.168, vitaminE: 0.196, vitaminK1: 0.672, vitaminK2: 7, choline: 4.76, calcium: 199, chloride: 15, chromium: 0.56, copper: 0.008, iodine: 10.64, iron: 0.112, magnesium: 7.56, manganese: 0.008, molybdenum: 2.24, phosphorus: 128.8, potassium: 21.28, selenium: 7.84, zinc: 1.008 },
   },
   {
@@ -770,7 +770,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'AncestralAnnie',
     upvotes: 569,
     downvotes: 34,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 104, protein: 6, carbs: 8, fat: 5.5, fiber: 0, sugars: 8, satFat: 3.6, monoFat: 1.5, polyFat: 0.2, omega3: 50, omega6: 150, transFat: 0.2, cholesterol: 22, sodium: 78, vitaminA: 47, vitaminB1: 0.05, vitaminB2: 0.24, vitaminB3: 0.13, vitaminB5: 0.66, vitaminB6: 0.05, vitaminB7: 4, vitaminB9: 12, vitaminB12: 0.63, vitaminC: 0.9, vitaminD: 0.2, vitaminE: 0.1, vitaminK1: 0.3, vitaminK2: 2, choline: 26, calcium: 207, chloride: 175, chromium: 1, copper: 0.02, iodine: 54, iron: 0.09, magnesium: 20, manganese: 0.01, molybdenum: 9, phosphorus: 161, potassium: 264, selenium: 3.7, zinc: 1 },
   },
   {
@@ -781,7 +781,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'RawMaven',
     upvotes: 884,
     downvotes: 34,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 139, protein: 8.1, carbs: 10.8, fat: 7.2, fiber: 0, sugars: 11, satFat: 4.5, monoFat: 1.9, polyFat: 0.4, omega3: 90, omega6: 250, transFat: 0.3, cholesterol: 29, sodium: 91, vitaminA: 115, vitaminB1: 0.07, vitaminB2: 0.33, vitaminB3: 0.36, vitaminB5: 0.85, vitaminB6: 0.14, vitaminB7: 6, vitaminB9: 31, vitaminB12: 0.7, vitaminC: 1.7, vitaminD: 0.3, vitaminE: 0.2, vitaminK1: 0.7, vitaminK2: 4, choline: 36, calcium: 300, chloride: 230, chromium: 1, copper: 0.02, iodine: 80, iron: 0.1, magnesium: 29, manganese: 0.01, molybdenum: 11, phosphorus: 237, potassium: 376, selenium: 8.9, zinc: 1.1 },
   },
   {
@@ -792,7 +792,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'MacroMaster',
     upvotes: 255,
     downvotes: 35,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 112, protein: 6.72, carbs: 0.7, fat: 9.24, fiber: 0, sugars: 0.14, satFat: 5.6, monoFat: 2.52, polyFat: 0.336, omega3: 39.2, omega6: 196, transFat: 0.308, cholesterol: 28, sodium: 232, vitaminA: 86.8, vitaminB1: 0.008, vitaminB2: 0.118, vitaminB3: 0.028, vitaminB5: 0.14, vitaminB6: 0.02, vitaminB7: 0.56, vitaminB9: 5.6, vitaminB12: 0.43, vitaminC: 0, vitaminD: 0.168, vitaminE: 0.196, vitaminK1: 0.672, vitaminK2: 21, choline: 4.76, calcium: 198, chloride: 277.2, chromium: 0.56, copper: 0.008, iodine: 10.64, iron: 0.112, magnesium: 7.56, manganese: 0.008, molybdenum: 2.24, phosphorus: 128.8, potassium: 21.28, selenium: 7.84, zinc: 1.008 },
   },
   {
@@ -803,7 +803,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'TallowTown',
     upvotes: 895,
     downvotes: 0,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 112, protein: 6.72, carbs: 0.7, fat: 9.24, fiber: 0, sugars: 0.14, satFat: 5.6, monoFat: 2.52, polyFat: 0.336, omega3: 39.2, omega6: 196, transFat: 0.308, cholesterol: 28, sodium: 274, vitaminA: 86.8, vitaminB1: 0.008, vitaminB2: 0.118, vitaminB3: 0.028, vitaminB5: 0.14, vitaminB6: 0.02, vitaminB7: 0.56, vitaminB9: 5.6, vitaminB12: 0.44, vitaminC: 0, vitaminD: 0.168, vitaminE: 0.196, vitaminK1: 0.672, vitaminK2: 14, choline: 4.76, calcium: 207, chloride: 277.2, chromium: 0.56, copper: 0.008, iodine: 10.64, iron: 0.112, magnesium: 7.56, manganese: 0.008, molybdenum: 2.24, phosphorus: 128.8, potassium: 21.28, selenium: 7.84, zinc: 1.008 },
   },
   {
@@ -814,7 +814,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'PastureLife',
     upvotes: 539,
     downvotes: 4,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 74, protein: 4, carbs: 0.7, fat: 6, fiber: 0, sugars: 0.14, satFat: 4.2, monoFat: 2.52, polyFat: 0.336, omega3: 39.2, omega6: 196, transFat: 0.308, cholesterol: 28, sodium: 316, vitaminA: 86.8, vitaminB1: 0.008, vitaminB2: 0.24, vitaminB3: 0.028, vitaminB5: 0.14, vitaminB6: 0.02, vitaminB7: 0.56, vitaminB9: 5.6, vitaminB12: 0.48, vitaminC: 0, vitaminD: 0.168, vitaminE: 0.196, vitaminK1: 0.672, vitaminK2: 5, choline: 4.76, calcium: 140, chloride: 490, chromium: 0.56, copper: 0.008, iodine: 10.64, iron: 0.112, magnesium: 7.56, manganese: 0.008, molybdenum: 2.24, phosphorus: 128.8, potassium: 21.28, selenium: 7.84, zinc: 0.8 },
   },
   {
@@ -825,7 +825,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'TallowTown',
     upvotes: 139,
     downvotes: 9,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 110, protein: 12.6, carbs: 4, fat: 4.9, fiber: 0, sugars: 3, satFat: 1.9, monoFat: 0.9, polyFat: 0.2, omega3: 20, omega6: 120, transFat: 0.15, cholesterol: 19, sodium: 350, vitaminA: 42, vitaminB1: 0.03, vitaminB2: 0.19, vitaminB3: 0.11, vitaminB5: 0.63, vitaminB6: 0.05, vitaminB7: 3, vitaminB9: 14, vitaminB12: 0.49, vitaminC: 0, vitaminD: 0.1, vitaminE: 0.1, vitaminK1: 0, vitaminK2: 1, choline: 21, calcium: 94, chloride: 540, chromium: 1, copper: 0.03, iodine: 29, iron: 0.08, magnesium: 9, manganese: 0, molybdenum: 6, phosphorus: 178, potassium: 118, selenium: 11.4, zinc: 0.44 },
   },
   {
@@ -836,7 +836,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'PastureLife',
     upvotes: 335,
     downvotes: 25,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 105, protein: 5.9, carbs: 7.9, fat: 5.6, fiber: 0, sugars: 7.9, satFat: 3.6, monoFat: 1.5, polyFat: 0.2, omega3: 50, omega6: 150, transFat: 0.2, cholesterol: 22, sodium: 77, vitaminA: 47, vitaminB1: 0.05, vitaminB2: 0.24, vitaminB3: 0.13, vitaminB5: 0.65, vitaminB6: 0.05, vitaminB7: 4, vitaminB9: 12, vitaminB12: 0.62, vitaminC: 0.9, vitaminD: 0.2, vitaminE: 0.1, vitaminK1: 0.3, vitaminK2: 2, choline: 26, calcium: 205, chloride: 175, chromium: 1, copper: 0.02, iodine: 53, iron: 0.09, magnesium: 20, manganese: 0.01, molybdenum: 9, phosphorus: 160, potassium: 262, selenium: 3.7, zinc: 1 },
   },
   {
@@ -847,7 +847,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'GrassFedGuru',
     upvotes: 112,
     downvotes: 27,
-    category: 'Dairy & Eggs',
+    category: 'Dairy',
     nutrients: { calories: 130, protein: 13, carbs: 6, fat: 6, fiber: 0, sugars: 5, satFat: 4, monoFat: 1.6, polyFat: 0.2, omega3: 40, omega6: 140, transFat: 0.2, cholesterol: 25, sodium: 55, vitaminA: 68, vitaminB1: 0.04, vitaminB2: 0.36, vitaminB3: 0.28, vitaminB5: 0.55, vitaminB6: 0.08, vitaminB7: 4, vitaminB9: 15, vitaminB12: 0.98, vitaminC: 0, vitaminD: 0.2, vitaminE: 0.1, vitaminK1: 0.3, vitaminK2: 2, choline: 22, calcium: 150, chloride: 125, chromium: 1, copper: 0.03, iodine: 51, iron: 0.1, magnesium: 17, manganese: 0.01, molybdenum: 8, phosphorus: 204, potassium: 212, selenium: 14.6, zinc: 0.8 },
   },
   {
@@ -858,7 +858,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'GrassFedGuru',
     upvotes: 520,
     downvotes: 30,
-    category: 'Dairy & Eggs',
+    category: 'Eggs',
     nutrients: { calories: 55, protein: 2.7, carbs: 0.6, fat: 4.5, fiber: 0, sugars: 0.1, satFat: 1.6, monoFat: 2, polyFat: 0.7, omega3: 40, omega6: 600, transFat: 0, cholesterol: 184, sodium: 8, vitaminA: 65, vitaminB1: 0.03, vitaminB2: 0.09, vitaminB3: 0, vitaminB5: 0.51, vitaminB6: 0.06, vitaminB7: 9.6, vitaminB9: 25, vitaminB12: 0.33, vitaminC: 0, vitaminD: 0.9, vitaminE: 0.44, vitaminK1: 0.1, vitaminK2: 5.5, choline: 139, calcium: 22, chloride: 15, chromium: 0.2, copper: 0.01, iodine: 13, iron: 0.46, magnesium: 1, manganese: 0.01, molybdenum: 2, phosphorus: 66, potassium: 19, selenium: 9.5, zinc: 0.39 },
   },
   {
@@ -869,7 +869,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'OmegaBot',
     upvotes: 624,
     downvotes: 44,
-    category: 'Dairy & Eggs',
+    category: 'Eggs',
     nutrients: { calories: 17, protein: 3.6, carbs: 0.2, fat: 0.1, fiber: 0, sugars: 0.2, satFat: 0, monoFat: 0, polyFat: 0, omega3: 0, omega6: 0, transFat: 0, cholesterol: 0, sodium: 55, vitaminA: 0, vitaminB1: 0, vitaminB2: 0.15, vitaminB3: 0.03, vitaminB5: 0.06, vitaminB6: 0, vitaminB7: 2.3, vitaminB9: 1, vitaminB12: 0.03, vitaminC: 0, vitaminD: 0, vitaminE: 0, vitaminK1: 0, vitaminK2: 0, choline: 0.4, calcium: 2, chloride: 85, chromium: 0.1, copper: 0.01, iodine: 1, iron: 0.03, magnesium: 4, manganese: 0, molybdenum: 1.5, phosphorus: 5, potassium: 54, selenium: 6.6, zinc: 0.01 },
   },
   {
@@ -880,7 +880,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'AncestralAnnie',
     upvotes: 725,
     downvotes: 10,
-    category: 'Dairy & Eggs',
+    category: 'Eggs',
     nutrients: { calories: 130, protein: 9, carbs: 1, fat: 9.6, fiber: 0, sugars: 0.7, satFat: 2.6, monoFat: 4.6, polyFat: 0.9, omega3: 70, omega6: 800, transFat: 0, cholesterol: 619, sodium: 102, vitaminA: 136, vitaminB1: 0.11, vitaminB2: 0.28, vitaminB3: 0.14, vitaminB5: 1.3, vitaminB6: 0.18, vitaminB7: 14, vitaminB9: 56, vitaminB12: 3.8, vitaminC: 0, vitaminD: 1.2, vitaminE: 0.9, vitaminK1: 0.3, vitaminK2: 22, choline: 184, calcium: 45, chloride: 160, chromium: 0.3, copper: 0.04, iodine: 34, iron: 2.7, magnesium: 12, manganese: 0.03, molybdenum: 6, phosphorus: 154, potassium: 156, selenium: 25.5, zinc: 1 },
   },
   {

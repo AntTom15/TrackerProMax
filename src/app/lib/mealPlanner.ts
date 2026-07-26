@@ -43,7 +43,13 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
     { id: 'slot3', name: 'Dinner', meal: 'Dinner', archetype: 'fatty' },
   ],
   restrictedDays: [],
+  includeRecommendations: false,
 };
+
+// Non-pantry foods must beat pantry foods by a clear margin (1/0.75 ≈
+// 1.33×) before they get recommended — the pantry is what the user
+// actually owns.
+const RECOMMENDATION_HANDICAP = 0.75;
 
 // Effective calorie share per slot. Explicit caloriePct values are
 // honored; slots left on "auto" split whatever percent is unclaimed.
@@ -124,16 +130,39 @@ const addToTotals = (totals: Totals, food: Food, servings: number) => {
   }
 };
 
-// Marginal %RDA coverage gained by adding `servings` of `food` on top
-// of `totals`, capped at 100% per nutrient (diminishing returns).
-const microGain = (totals: Totals, food: Food, servings: number) => {
+// Marginal micronutrient value of adding `servings` of `food`.
+// Two horizons blend:
+//   - daily: capped at 100% of RDA for today (in-day variety);
+//   - weekly pace: capped at `pace` × RDA for the running 7-day window
+//     (pace = how many RDA-days should be covered by tonight). A
+//     nutrient already at week-pace earns nothing, so multi-day plans
+//     chase the week's laggards toward TRUE 100% weekly fulfillment
+//     instead of repeating the same 90% every day.
+// weekPrev holds finalized totals from earlier days in the window;
+// today's running totals are added on top.
+const microGain = (
+  dayTotals: Totals,
+  weekPrev: Totals,
+  pace: number,
+  food: Food,
+  servings: number
+) => {
   let gain = 0;
   for (const { key, rda } of MICRO_RDA) {
     const per = food.nutrients?.[key] ?? 0;
     if (per <= 0) continue;
-    const cur = totals[key] ?? 0;
-    gain +=
-      Math.min(1, (cur + per * servings) / rda) - Math.min(1, cur / rda);
+    const add = per * servings;
+    const d0 = dayTotals[key] ?? 0;
+    const dailyGain =
+      Math.min(1, (d0 + add) / rda) - Math.min(1, d0 / rda);
+    const w0 = (weekPrev[key] ?? 0) + d0;
+    const weekTarget = rda * pace;
+    // Scaled by pace so a given milligram counts the same on both axes.
+    const weekGain =
+      (Math.min(1, (w0 + add) / weekTarget) -
+        Math.min(1, w0 / weekTarget)) *
+      pace;
+    gain += 0.5 * dailyGain + 0.5 * weekGain;
   }
   return gain;
 };
@@ -197,15 +226,29 @@ export interface GenerateResult {
 interface Candidate {
   food: Food;
   shape: MacroShape;
+  inPantry: boolean;
 }
 
 const round25 = (x: number) => Math.max(0.25, Math.round(x * 4) / 4);
 
 // Sanity bounds: nothing below ~25 kcal/serving can anchor a meal
-// (stops "64x lemon juice" filler), and no single food exceeds 4
-// servings in one meal.
+// (stops "64x lemon juice" filler), no single food exceeds 4 servings
+// in one meal, and — when the serving weight is known — no item
+// exceeds ~450g (stops "960g coconut water" portions).
 const MIN_CAL_PER_SERVING = 25;
 const MAX_SERVINGS = 4;
+const MAX_GRAMS_PER_ITEM = 450;
+
+const maxServingsFor = (food: Food): number => {
+  const g = food.servingWeightGrams;
+  if (g && g > 0) {
+    return Math.max(
+      0.25,
+      Math.min(MAX_SERVINGS, Math.floor((MAX_GRAMS_PER_ITEM / g) * 4) / 4)
+    );
+  }
+  return MAX_SERVINGS;
+};
 
 // Soft macro steering: how far the day's macro fractions sit outside a
 // wide tolerance band around the targets. Lower is better.
@@ -235,6 +278,8 @@ const buildMeal = (
   budget: number,
   candidates: Candidate[],
   dayTotals: Totals,
+  weekPrev: Totals,
+  pace: number,
   settings: PlannerSettings,
   recentUse: Map<string, number>,
   planUse: Map<string, number>,
@@ -299,13 +344,16 @@ const buildMeal = (
       if (compositional) fit = Math.max(fit, 0.3);
       if (fit <= 0) continue;
 
-      const servings = Math.min(round25(chunk / cand.shape.cal), MAX_SERVINGS);
+      const servings = Math.min(
+        round25(chunk / cand.shape.cal),
+        maxServingsFor(cand.food)
+      );
       const cals = servings * cand.shape.cal;
       // Don't blow the budget: allow modest overshoot only.
       if (cals > remaining * 1.25 + 40) continue;
 
       // Micronutrient value per calorie — the core objective.
-      const gain = microGain(dayTotals, cand.food, servings);
+      const gain = microGain(dayTotals, weekPrev, pace, cand.food, servings);
       let score = (gain / Math.max(cals, 50)) * 1000;
 
       // Slot archetype fit.
@@ -331,6 +379,9 @@ const buildMeal = (
         if (worsened > 0) score *= 1 / (1 + 8 * worsened);
       }
 
+      // Recommendations: outside-the-pantry foods carry a handicap.
+      if (!cand.inPantry) score *= RECOMMENDATION_HANDICAP;
+
       // Seeded jitter so equal-ish foods trade places between rerolls.
       score *= 0.85 + rng() * 0.3;
 
@@ -344,7 +395,11 @@ const buildMeal = (
       if (requiredCat) continue;
       break;
     }
-    items.push({ foodId: best.cand.food.id, servings: best.servings });
+    items.push({
+      foodId: best.cand.food.id,
+      servings: best.servings,
+      ...(best.cand.inPantry ? {} : { recommended: true }),
+    });
     usedHere.add(best.cand.food.id);
     dayUsed.add(best.cand.food.id);
     addToTotals(dayTotals, best.cand.food, best.servings);
@@ -389,7 +444,9 @@ const trueUpCalories = (
         const step = cal * 0.25;
         const dir = diff > 0 ? 1 : -1;
         if (dir < 0 && it.servings <= 0.25) continue; // can't shrink further
-        if (dir > 0 && it.servings >= MAX_SERVINGS) continue; // capped
+        const itemFood = foodById.get(it.foodId);
+        if (dir > 0 && itemFood && it.servings >= maxServingsFor(itemFood))
+          continue; // capped
         if (step > Math.abs(diff) * 1.5) continue; // too coarse a step
         if (!bestItem || step > bestStep) {
           bestItem = it;
@@ -415,13 +472,16 @@ export function generatePlan(
 ): GenerateResult {
   const warnings: string[] = [];
   const pantrySet = new Set(pantryIds);
+  const withRecs = !!settings.includeRecommendations;
   const pool = foods.filter(
-    (f) => pantrySet.has(f.id) && (f.nutrients?.calories ?? 0) > 0
+    (f) =>
+      (pantrySet.has(f.id) || withRecs) && (f.nutrients?.calories ?? 0) > 0
   );
 
   const candidates: Candidate[] = pool.map((food) => ({
     food,
     shape: macroShape(food),
+    inPantry: pantrySet.has(food.id),
   }));
 
   if (settings.calorieTarget < 800) {
@@ -432,7 +492,7 @@ export function generatePlan(
     };
   }
   const usable = candidates.filter(
-    (cd) => cd.shape.cal >= MIN_CAL_PER_SERVING
+    (cd) => cd.inPantry && cd.shape.cal >= MIN_CAL_PER_SERVING
   ).length;
   if (usable < 9) {
     warnings.push(
@@ -481,6 +541,7 @@ export function generatePlan(
     const allowed = new Set(rule.allowedCategories);
     const usableCount = candidates.filter(
       (cd) =>
+        cd.inPantry &&
         allowed.has(cd.food.category) &&
         cd.shape.cal >= MIN_CAL_PER_SERVING
     ).length;
@@ -494,6 +555,8 @@ export function generatePlan(
   const days: PlannedDay[] = [];
   // Rolling usage counts for rotation (last-2-days window + whole plan).
   const planUse = new Map<string, number>();
+  // Finalized totals for the running 7-day window (weekly micro pacing).
+  let weekPrev: Totals = {};
   let prevDayFoods = new Set<string>();
   let prevPrevDayFoods = new Set<string>();
   if (priorUse) {
@@ -506,6 +569,9 @@ export function generatePlan(
     const rng = mulberry32(hashStr(`${date}|${seed}`));
     const dayTotals: Totals = {};
     const meals: PlannedMeal[] = [];
+    // New 7-day window → reset the weekly accumulator.
+    if (d % 7 === 0) weekPrev = {};
+    const pace = (d % 7) + 1;
 
     const recentUse = new Map<string, number>();
     for (const id of prevDayFoods)
@@ -543,6 +609,8 @@ export function generatePlan(
         slotBudgets[si],
         dayCandidates,
         dayTotals,
+        weekPrev,
+        pace,
         settings,
         recentUse,
         planUse,
@@ -567,6 +635,10 @@ export function generatePlan(
       for (const it of m.items) {
         todayFoods.add(it.foodId);
         planUse.set(it.foodId, (planUse.get(it.foodId) ?? 0) + 1);
+        // Finalize into the weekly accumulator using post-true-up
+        // amounts, so weekly pacing sees what's actually planned.
+        const food = foodById.get(it.foodId);
+        if (food) addToTotals(weekPrev, food, it.servings);
       }
     prevPrevDayFoods = prevDayFoods;
     prevDayFoods = todayFoods;
@@ -628,3 +700,146 @@ export const dayMicroCoverage = (
     sum += Math.min(1, (totals[key] ?? 0) / rda);
   return sum / MICRO_RDA.length;
 };
+
+// Coverage across a multi-day block (a week, or a month's tail):
+// average capped % of (RDA × block length). This is the number the
+// weekly pacing optimizes toward 100%.
+export const periodMicroCoverage = (
+  days: PlannedDay[],
+  foodById: Map<string, Food>
+) => {
+  if (days.length === 0) return 0;
+  const totals: Totals = {};
+  for (const day of days)
+    for (const meal of day.meals)
+      for (const it of meal.items) {
+        const food = foodById.get(it.foodId);
+        if (food) addToTotals(totals, food, it.servings);
+      }
+  let sum = 0;
+  for (const { key, rda } of MICRO_RDA)
+    sum += Math.min(1, (totals[key] ?? 0) / (rda * days.length));
+  return sum / MICRO_RDA.length;
+};
+
+// Practical amount label: total grams when the serving weight is
+// known ("150g"), otherwise servings × label ("1.5 × 1 cup").
+export const fmtPlannedAmount = (food: Food, servings: number) => {
+  const g = food.servingWeightGrams;
+  if (g && g > 0) {
+    const grams = servings * g;
+    // Round to the nearest 5g — nobody weighs out 148g.
+    return `${Math.max(5, Math.round(grams / 5) * 5)}g`;
+  }
+  return `${Math.round(servings * 100) / 100} × ${food.servingLabel}`;
+};
+
+// Replacement for a plan item the user rejected (starred rec's X flow,
+// or any future swap UI). Finds the best alternative with a similar
+// calorie contribution, honoring the day's restriction, the slot's
+// composition, and the no-repeat-in-a-day rule.
+// pantryOnly=true  → "No": swap in something the user owns.
+// pantryOnly=false → "Yes": next-optimal overall (handicap applies, so
+//                     the result may well be a pantry food — then it
+//                     simply isn't starred).
+export function suggestReplacement(
+  foods: Food[],
+  pantryIds: string[],
+  settings: PlannerSettings,
+  plan: MealPlan,
+  date: string,
+  slotId: string,
+  currentFoodId: string,
+  excludeIds: string[],
+  pantryOnly: boolean
+): PlannedItem | null {
+  const day = plan.days.find((dd) => dd.date === date);
+  const meal = day?.meals.find((m) => m.slotId === slotId);
+  const item = meal?.items.find((it) => it.foodId === currentFoodId);
+  const oldFood = foods.find((f) => f.id === currentFoodId);
+  if (!day || !meal || !item || !oldFood) return null;
+
+  const slot = settings.slots.find((s) => s.id === slotId);
+  const pantrySet = new Set(pantryIds);
+  const oldCals = (oldFood.nutrients?.calories ?? 0) * item.servings;
+
+  // Day totals without the item being replaced; other foods today are
+  // off-limits.
+  const dayTotals: Totals = {};
+  const dayUsed = new Set<string>();
+  for (const m of day.meals)
+    for (const it of m.items) {
+      if (m.slotId === slotId && it.foodId === currentFoodId) continue;
+      const food = foods.find((f) => f.id === it.foodId);
+      if (food) {
+        addToTotals(dayTotals, food, it.servings);
+        dayUsed.add(it.foodId);
+      }
+    }
+
+  // Restriction whitelist for this date's weekday.
+  const weekday = getDay(new Date(`${date}T12:00:00`));
+  const rules = (settings.restrictedDays ?? []).filter(
+    (r) => r.weekdays.includes(weekday) && r.allowedCategories.length > 0
+  );
+  let allowed: Set<string> | null = null;
+  if (rules.length > 0) {
+    allowed = new Set(rules[0].allowedCategories);
+    for (const rule of rules.slice(1)) {
+      const next = new Set(rule.allowedCategories);
+      allowed = new Set([...allowed].filter((cat) => next.has(cat)));
+    }
+  }
+
+  // Keep the slot's composition: if the outgoing food filled one of
+  // the slot's chosen categories, the replacement must too.
+  const slotCats = slot?.categories ?? [];
+  const compositional = slotCats.length > 0;
+  const requiredCat =
+    compositional && slotCats.includes(oldFood.category)
+      ? oldFood.category
+      : null;
+
+  const excluded = new Set([...excludeIds, currentFoodId]);
+  let best: { item: PlannedItem; score: number } | null = null;
+
+  // Pass 0 honors the no-repeat-in-a-day rule; pass 1 relaxes it so a
+  // tiny pantry can still answer "No — use my pantry".
+  for (let pass = 0; pass < 2 && !best; pass++) {
+    for (const food of foods) {
+      if (excluded.has(food.id)) continue;
+      if (pass === 0 && dayUsed.has(food.id)) continue;
+      const inPantry = pantrySet.has(food.id);
+      if (pantryOnly && !inPantry) continue;
+      if (allowed && !allowed.has(food.category)) continue;
+      if (requiredCat && food.category !== requiredCat) continue;
+      const shape = macroShape(food);
+      if (shape.cal < MIN_CAL_PER_SERVING) continue;
+      let fit = slot ? archetypeFit(shape, slot.archetype) : 1;
+      if (compositional) fit = Math.max(fit, 0.3);
+      if (fit <= 0) continue;
+
+      const servings = Math.min(
+        round25(Math.max(oldCals, 60) / shape.cal),
+        maxServingsFor(food)
+      );
+      const cals = servings * shape.cal;
+      const gain = microGain(dayTotals, {}, 1, food, servings);
+      let score = (gain / Math.max(cals, 50)) * 1000 * fit;
+      if (!inPantry) score *= RECOMMENDATION_HANDICAP;
+
+      if (!best || score > best.score) {
+        best = {
+          item: {
+            foodId: food.id,
+            servings,
+            ...(inPantry ? {} : { recommended: true }),
+          },
+          score,
+        };
+      }
+    }
+  }
+
+  return best?.item ?? null;
+}

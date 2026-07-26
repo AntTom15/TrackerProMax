@@ -6,14 +6,17 @@ import {
   ScrollView,
   TextInput,
   Pressable,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, isToday } from 'date-fns';
 import {
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Plus,
+  Sparkles,
   X,
 } from './Icons';
 import { MEALS, PLANT_CATEGORIES, WEEKDAY_LABELS } from '../lib/constants';
@@ -25,8 +28,11 @@ import {
   dayMicroCoverage,
   dayTotals,
   effectiveSlotPcts,
+  fmtPlannedAmount,
   generatePlan,
   mealTotals,
+  periodMicroCoverage,
+  suggestReplacement,
 } from '../lib/mealPlanner';
 import type {
   Food,
@@ -242,6 +248,92 @@ export default function MealPlannerPage({
     }
   };
 
+  // ---- recommendation rejection: X on a starred item ----
+  // Rejected food ids per item slot, so "Yes" cycles never repeat.
+  const [rejectedRecs, setRejectedRecs] = useState<Record<string, string[]>>(
+    {}
+  );
+  const swapItem = (
+    date: string,
+    slotId: string,
+    currentFoodId: string,
+    pantryOnly: boolean
+  ) => {
+    if (!plan) return;
+    const key = `${date}|${slotId}|${currentFoodId}`;
+    const excludes = rejectedRecs[key] ?? [];
+    const replacement = suggestReplacement(
+      foods,
+      pantryIds,
+      settings,
+      plan,
+      date,
+      slotId,
+      currentFoodId,
+      excludes,
+      pantryOnly
+    );
+    if (!replacement) {
+      Alert.alert(
+        'No alternative found',
+        pantryOnly
+          ? 'Nothing in your pantry fits this spot — try stocking more foods.'
+          : 'No other food fits this spot.'
+      );
+      return;
+    }
+    // Remember the rejected food under the REPLACEMENT's key so a
+    // follow-up rejection keeps excluding the whole chain.
+    setRejectedRecs((prev) => ({
+      ...prev,
+      [`${date}|${slotId}|${replacement.foodId}`]: [
+        ...excludes,
+        currentFoodId,
+      ],
+    }));
+    onSetPlan({
+      ...plan,
+      days: plan.days.map((d) =>
+        d.date !== date
+          ? d
+          : {
+              ...d,
+              meals: d.meals.map((m) =>
+                m.slotId !== slotId
+                  ? m
+                  : {
+                      ...m,
+                      items: m.items.map((it) =>
+                        it.foodId === currentFoodId ? replacement : it
+                      ),
+                    }
+              ),
+            }
+      ),
+    });
+  };
+  const rejectRecommendation = (
+    date: string,
+    slotId: string,
+    foodId: string
+  ) => {
+    Alert.alert(
+      'Recommended food',
+      'Would you like another recommendation?',
+      [
+        {
+          text: 'No — use my pantry',
+          onPress: () => swapItem(date, slotId, foodId, true),
+        },
+        {
+          text: 'Yes',
+          onPress: () => swapItem(date, slotId, foodId, false),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const logMeal = (date: string, meal: PlannedMeal) => {
     for (const item of meal.items) {
       onAddEntry({
@@ -253,9 +345,6 @@ export default function MealPlannerPage({
     }
     setLoggedMeals((prev) => ({ ...prev, [`${meal.slotId}|${date}`]: true }));
   };
-
-  const fmtAmount = (servings: number) =>
-    String(Math.round(servings * 100) / 100);
 
   return (
     <View style={styles.container}>
@@ -492,6 +581,42 @@ export default function MealPlannerPage({
           </View>
         )}
 
+        {/* ---- Recommendations toggle ---- */}
+        <Pressable
+          onPress={() =>
+            onChangeSettings({
+              includeRecommendations: !settings.includeRecommendations,
+            })
+          }
+          style={[
+            styles.recToggle,
+            settings.includeRecommendations && styles.recToggleActive,
+          ]}
+        >
+          <Sparkles
+            size={14}
+            color={settings.includeRecommendations ? c.onAccent : c.textMuted}
+          />
+          <Text
+            style={[
+              styles.recToggleText,
+              settings.includeRecommendations && styles.recToggleTextActive,
+            ]}
+          >
+            Include recommendations
+          </Text>
+          <Text
+            style={[
+              styles.recToggleHint,
+              settings.includeRecommendations && styles.recToggleTextActive,
+            ]}
+          >
+            {settings.includeRecommendations
+              ? 'Non-pantry finds get a ★'
+              : 'Pantry only'}
+          </Text>
+        </Pressable>
+
         {/* ---- Generate ---- */}
         <View style={styles.generateRow}>
           <View style={styles.horizonToggle}>
@@ -528,9 +653,23 @@ export default function MealPlannerPage({
           </Text>
         ))}
 
-        {/* ---- Plan ---- */}
+        {/* ---- Plan (grouped into week blocks with weekly coverage) ---- */}
         {plan &&
-          plan.days.map((day) => {
+          Array.from(
+            { length: Math.ceil(plan.days.length / 7) },
+            (_, wi) => plan.days.slice(wi * 7, wi * 7 + 7)
+          ).map((weekDays, wi) => (
+            <View key={wi}>
+              {plan.days.length > 1 && (
+                <View style={styles.weekDivider}>
+                  <Text style={styles.weekDividerText}>Week {wi + 1}</Text>
+                  <Text style={styles.weekDividerMeta}>
+                    {Math.round(periodMicroCoverage(weekDays, foodById) * 100)}
+                    % micros over the week
+                  </Text>
+                </View>
+              )}
+              {weekDays.map((day) => {
             const open = !!openDays[day.date];
             const t = dayTotals(day, foodById);
             const cov = dayMicroCoverage(day, foodById);
@@ -578,16 +717,33 @@ export default function MealPlannerPage({
                       const logged = !!loggedMeals[loggedKey];
                       return (
                         <View key={meal.slotId} style={styles.mealCard}>
-                          <View style={styles.mealCardHeader}>
+                          {/* Tap the header for details, editing, and
+                              the full nutrient summary */}
+                          <Pressable
+                            onPress={() =>
+                              (navigation as any).navigate('PlanMealDetail', {
+                                date: day.date,
+                                slotId: meal.slotId,
+                              })
+                            }
+                            style={({ pressed }) => [
+                              styles.mealCardHeader,
+                              pressed && { opacity: 0.6 },
+                            ]}
+                            hitSlop={4}
+                          >
                             <Text style={styles.mealCardTitle}>
                               {meal.slotName}
                             </Text>
-                            <Text style={styles.mealCardMeta}>
-                              {Math.round(mt.calories)} kcal · P
-                              {Math.round(mt.protein)} C{Math.round(mt.carbs)}{' '}
-                              F{Math.round(mt.fat)}
-                            </Text>
-                          </View>
+                            <View style={styles.mealCardHeaderRight}>
+                              <Text style={styles.mealCardMeta}>
+                                {Math.round(mt.calories)} kcal · P
+                                {Math.round(mt.protein)} C
+                                {Math.round(mt.carbs)} F{Math.round(mt.fat)}
+                              </Text>
+                              <ChevronRight size={14} color={c.textMuted} />
+                            </View>
+                          </Pressable>
                           {meal.items.length === 0 && (
                             <Text style={styles.mealEmpty}>
                               No pantry foods fit this slot.
@@ -600,9 +756,14 @@ export default function MealPlannerPage({
                               (food.nutrients?.calories ?? 0) * item.servings;
                             return (
                               <View key={item.foodId} style={styles.itemRow}>
+                                {item.recommended && (
+                                  <Sparkles
+                                    size={12}
+                                    color={c.accentDeep}
+                                  />
+                                )}
                                 <Text style={styles.itemAmount}>
-                                  {fmtAmount(item.servings)} ×{' '}
-                                  {food.servingLabel}
+                                  {fmtPlannedAmount(food, item.servings)}
                                 </Text>
                                 <Text
                                   style={styles.itemName}
@@ -613,6 +774,21 @@ export default function MealPlannerPage({
                                 <Text style={styles.itemCals}>
                                   {Math.round(cals)}
                                 </Text>
+                                {item.recommended && (
+                                  <Pressable
+                                    onPress={() =>
+                                      rejectRecommendation(
+                                        day.date,
+                                        meal.slotId,
+                                        item.foodId
+                                      )
+                                    }
+                                    style={styles.itemReject}
+                                    hitSlop={6}
+                                  >
+                                    <X size={10} color={c.textMuted} />
+                                  </Pressable>
+                                )}
                               </View>
                             );
                           })}
@@ -645,6 +821,8 @@ export default function MealPlannerPage({
               </View>
             );
           })}
+            </View>
+          ))}
 
         {!plan && (
           <Text style={styles.emptyText}>
@@ -1120,6 +1298,80 @@ const createStyles = (c: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 8,
+    },
+    mealCardHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    itemReject: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: c.cardAlt,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 12,
+      backgroundColor: c.card,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      marginBottom: 10,
+    },
+    recToggleActive: {
+      backgroundColor: c.accent,
+    },
+    recToggleText: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    recToggleHint: {
+      fontSize: 10,
+      color: c.textMuted,
+      fontFamily: 'DM Sans',
+    },
+    recToggleTextActive: {
+      color: c.onAccent,
+    },
+    weekDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 4,
+      marginBottom: 10,
+      borderRadius: 10,
+      backgroundColor: c.tintLimeFaint,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+    weekDividerText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: c.text,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    weekDividerMeta: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      fontWeight: '600',
     },
     mealCardTitle: {
       fontSize: 14,

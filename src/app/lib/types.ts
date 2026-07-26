@@ -127,11 +127,18 @@ export interface PlannerSettings {
   fatPct: number | null;
   slots: MealSlot[];
   restrictedDays: RestrictedDay[];
+  // When true, the generator may star-in foods from the full database
+  // if they beat everything in the pantry by a clear margin.
+  includeRecommendations?: boolean;
 }
 
 export interface PlannedItem {
   foodId: string;
   servings: number;
+  // True when the engine recommended a food NOT in the pantry (only
+  // possible with the "include recommendations" toggle on). Starred in
+  // the UI, rejectable via the X → replacement flow.
+  recommended?: boolean;
 }
 
 export interface PlannedMeal {

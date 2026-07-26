@@ -13,6 +13,7 @@ import { Home, Dumbbell, Utensils, User } from './src/app/components/Icons';
 
 import { usePersistedState, STORAGE_KEYS } from './src/app/lib/storage';
 import { DEFAULT_PLANNER_SETTINGS } from './src/app/lib/mealPlanner';
+import { LEGACY_DAIRY_EGGS, splitDairyEggs } from './src/app/lib/constants';
 import { SEED_FOODS, SEED_PANTRY_IDS } from './src/app/lib/seedData';
 import { SEED_EXERCISES } from './src/app/lib/exerciseSeed';
 import { ThemeProvider, LIGHT, DARK, useThemeColors } from './src/app/lib/theme';
@@ -29,6 +30,7 @@ import LoggerPage from './src/app/components/LoggerPage';
 import NutritionSummaryPage from './src/app/components/NutritionSummaryPage';
 import LogFoodPickerPage from './src/app/components/LogFoodPickerPage';
 import MealPlannerPage from './src/app/components/MealPlannerPage';
+import MealPlanDetailPage from './src/app/components/MealPlanDetailPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -152,6 +154,16 @@ function DietStack({ store }) {
           />
         )}
       </Stack.Screen>
+      <Stack.Screen name="PlanMealDetail" options={{ title: 'Planned Meal' }}>
+        {() => (
+          <MealPlanDetailPage
+            foods={foods}
+            pantryIds={pantryIds}
+            plan={store.mealPlan}
+            onSetPlan={store.setMealPlan}
+          />
+        )}
+      </Stack.Screen>
       <Stack.Screen name="DietRecs" options={{ title: 'Diet Recommendations' }}>
         {() => <BlankPage title="Diet Recommendations" />}
       </Stack.Screen>
@@ -267,7 +279,9 @@ function useAppStore() {
       return (
         !cur ||
         Object.keys(cur.nutrients ?? {}).length <
-          Object.keys(sf.nutrients).length
+          Object.keys(sf.nutrients).length ||
+        // Category renames (e.g. Dairy & Eggs split) also refresh seeds.
+        cur.category !== sf.category
       );
     });
     if (stale) {
@@ -275,6 +289,22 @@ function useAppStore() {
         ...SEED_FOODS,
         ...prev.filter((f) => !seedIds.has(f.id)),
       ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foodsHydrated]);
+
+  // Self-heal: user-created foods still on the retired 'Dairy & Eggs'
+  // category migrate to 'Dairy'/'Eggs' (egg-in-name heuristic).
+  useEffect(() => {
+    if (!foodsHydrated) return;
+    if (foods.some((f) => f.category === LEGACY_DAIRY_EGGS)) {
+      setFoods((prev) =>
+        prev.map((f) =>
+          f.category === LEGACY_DAIRY_EGGS
+            ? { ...f, category: splitDairyEggs(f.category, f.name) }
+            : f
+        )
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [foodsHydrated]);
@@ -497,12 +527,40 @@ function useAppStore() {
     setWater((prev) => ({ ...prev, [date]: Math.max(0, oz) }));
 
   // ---- Meal planner: day template settings + last generated plan ----
-  const [plannerSettings, setPlannerSettings] = usePersistedState(
-    STORAGE_KEYS.plannerSettings,
-    DEFAULT_PLANNER_SETTINGS
-  );
+  const [plannerSettings, setPlannerSettings, plannerHydrated] =
+    usePersistedState(STORAGE_KEYS.plannerSettings, DEFAULT_PLANNER_SETTINGS);
   const updatePlannerSettings = (patch) =>
     setPlannerSettings((prev) => ({ ...prev, ...patch }));
+
+  // Self-heal: replace the retired 'Dairy & Eggs' category with
+  // 'Dairy' + 'Eggs' anywhere it appears in planner settings.
+  useEffect(() => {
+    if (!plannerHydrated) return;
+    const splitList = (cats) =>
+      (cats ?? []).flatMap((cat) =>
+        cat === LEGACY_DAIRY_EGGS ? ['Dairy', 'Eggs'] : [cat]
+      );
+    const touched =
+      (plannerSettings.slots ?? []).some((s) =>
+        (s.categories ?? []).includes(LEGACY_DAIRY_EGGS)
+      ) ||
+      (plannerSettings.restrictedDays ?? []).some((r) =>
+        (r.allowedCategories ?? []).includes(LEGACY_DAIRY_EGGS)
+      );
+    if (touched) {
+      setPlannerSettings((prev) => ({
+        ...prev,
+        slots: (prev.slots ?? []).map((s) =>
+          s.categories ? { ...s, categories: splitList(s.categories) } : s
+        ),
+        restrictedDays: (prev.restrictedDays ?? []).map((r) => ({
+          ...r,
+          allowedCategories: splitList(r.allowedCategories),
+        })),
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plannerHydrated]);
   const [mealPlan, setMealPlan] = usePersistedState(
     STORAGE_KEYS.mealPlan,
     null

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {
   ChevronLeft,
+  List,
   Search,
   ThumbsUp,
   ThumbsDown,
@@ -47,27 +48,34 @@ export default function FoodAdderPage({
   const initialCategory =
     (route.params as { category?: string } | undefined)?.category ?? null;
   const [category, setCategory] = useState<string | null>(initialCategory);
+  // Sort mode behind the filter button: community likes or A–Z.
+  const [sortMode, setSortMode] = useState<'likes' | 'alpha'>('likes');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   const inPantrySet = new Set(pantryIds);
 
+  const q = query.toLowerCase();
+  const searching = q.length > 0;
   const filtered = foods.filter((f) => {
-    const q = query.toLowerCase();
     const matchesQuery =
       !q ||
       f.name.toLowerCase().includes(q) ||
       f.category.toLowerCase().includes(q);
-    const matchesCategory = !category || f.category === category;
+    // Search supersedes the category chip: "Honey" finds honey even
+    // while a meat category is selected.
+    const matchesCategory = searching || !category || f.category === category;
     return matchesQuery && matchesCategory;
   });
 
-  // Separate into available and in-pantry, each sorted by upvotes
-  const available = filtered
-    .filter((f) => !inPantrySet.has(f.id))
-    .sort((a, b) => b.upvotes - a.upvotes);
+  const bySort = (a: Food, b: Food) =>
+    sortMode === 'alpha'
+      ? a.name.localeCompare(b.name)
+      : b.upvotes - a.upvotes;
 
-  const inPantry = filtered
-    .filter((f) => inPantrySet.has(f.id))
-    .sort((a, b) => b.upvotes - a.upvotes);
+  // Separate into available and in-pantry, each in the chosen sort
+  const available = filtered.filter((f) => !inPantrySet.has(f.id)).sort(bySort);
+
+  const inPantry = filtered.filter((f) => inPantrySet.has(f.id)).sort(bySort);
 
   const renderFoodItem = (food: Food) => {
     const myVote = myVotes[food.id] ?? null;
@@ -131,7 +139,52 @@ export default function FoodAdderPage({
           <ChevronLeft size={22} color={c.textMuted} />
         </Pressable>
         <Text style={styles.title}>Add to Pantry</Text>
+        <View style={{ flex: 1 }} />
+        {/* Sort/filter */}
+        <Pressable
+          onPress={() => setSortMenuOpen((o) => !o)}
+          style={[styles.filterBtn, sortMenuOpen && styles.filterBtnActive]}
+          hitSlop={6}
+        >
+          <List
+            size={18}
+            color={sortMenuOpen ? c.onAccent : c.text}
+          />
+        </Pressable>
       </View>
+
+      {/* Sort menu */}
+      {sortMenuOpen && (
+        <View style={styles.sortMenu}>
+          {(
+            [
+              ['likes', 'Most liked'],
+              ['alpha', 'A – Z'],
+            ] as const
+          ).map(([mode, label]) => (
+            <Pressable
+              key={mode}
+              onPress={() => {
+                setSortMode(mode);
+                setSortMenuOpen(false);
+              }}
+              style={[
+                styles.sortOption,
+                sortMode === mode && styles.sortOptionActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  sortMode === mode && styles.sortOptionTextActive,
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {/* Search bar */}
       <View style={styles.searchContainer}>
@@ -160,7 +213,12 @@ export default function FoodAdderPage({
           <Pressable
             key={cat}
             onPress={() => setCategory(category === cat ? null : cat)}
-            style={[styles.catChip, category === cat && styles.catChipActive]}
+            style={[
+              styles.catChip,
+              category === cat && styles.catChipActive,
+              // Chips don't constrain results while a search is typed.
+              searching && { opacity: 0.4 },
+            ]}
           >
             <Text
               style={[
@@ -234,6 +292,48 @@ const createStyles = (c: ThemeColors) =>
   },
   backBtn: {
     padding: 4,
+  },
+  filterBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: c.cardAlt,
+    borderWidth: 2,
+    borderColor: c.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBtnActive: {
+    backgroundColor: c.accent,
+  },
+  sortMenu: {
+    flexDirection: 'row',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  sortOption: {
+    flex: 1,
+    borderRadius: 10,
+    backgroundColor: c.cardAlt,
+    borderWidth: 2,
+    borderColor: c.text,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  sortOptionActive: {
+    backgroundColor: c.accent,
+  },
+  sortOptionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.textMuted,
+    fontFamily: 'Barlow Condensed',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  sortOptionTextActive: {
+    color: c.onAccent,
   },
   title: {
     fontSize: 20,

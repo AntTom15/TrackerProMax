@@ -1,30 +1,32 @@
 import type { MealName } from './types';
 
 // Single source of truth for food categories (was duplicated in
-// PantryPage and FoodEntryPage).
+// PantryPage and FoodEntryPage). Alphabetical by user request — a
+// predictable order beats a semantic one you have to memorize.
 export const CATEGORY_ORDER = [
-  'Fatty Muscle Meats',
-  'Lean Muscle Meats',
-  'Fatty Fish',
-  'Lean Fish',
-  'Dairy & Eggs',
-  'Lean Organs',
-  'Fatty Organs',
-  'Shellfish',
-  'Vegetables',
-  'Fruits',
-  'Grains',
-  'Nuts & Seeds',
-  'Starches & Tubers',
-  'Fungi',
-  'Fats & Oils',
-  'Sugars & Sweeteners',
-  'Legumes & Soy',
-  'Processed Plant Proteins',
-  'Supplements & Powders',
   'Broths & Infusions',
-  'Herbs & Aromatics',
+  'Dairy',
   'Desserts',
+  'Eggs',
+  'Fats & Oils',
+  'Fatty Fish',
+  'Fatty Muscle Meats',
+  'Fatty Organs',
+  'Fruits',
+  'Fungi',
+  'Grains',
+  'Herbs & Aromatics',
+  'Lean Fish',
+  'Lean Muscle Meats',
+  'Lean Organs',
+  'Legumes & Soy',
+  'Nuts & Seeds',
+  'Processed Plant Proteins',
+  'Shellfish',
+  'Starches & Tubers',
+  'Sugars & Sweeteners',
+  'Supplements & Powders',
+  'Vegetables',
 ];
 
 export const MEALS: MealName[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
@@ -37,11 +39,22 @@ export const ANIMAL_CATEGORIES = [
   'Lean Muscle Meats',
   'Fatty Fish',
   'Lean Fish',
-  'Dairy & Eggs',
+  'Dairy',
+  'Eggs',
   'Lean Organs',
   'Fatty Organs',
   'Shellfish',
 ];
+
+// 2026-07: 'Dairy & Eggs' split into 'Dairy' + 'Eggs'. Used by the
+// App.js migration effects for stored foods and planner settings.
+export const LEGACY_DAIRY_EGGS = 'Dairy & Eggs';
+export const splitDairyEggs = (category: string, foodName?: string): string =>
+  category === LEGACY_DAIRY_EGGS
+    ? (foodName ?? '').toLowerCase().includes('egg')
+      ? 'Eggs'
+      : 'Dairy'
+    : category;
 
 export const PLANT_CATEGORIES = [
   'Vegetables',
