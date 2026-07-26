@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# lock-file graveyard (bridge cannot delete files; safe to delete this folder)
+_to_delete/
