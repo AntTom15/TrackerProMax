@@ -170,6 +170,36 @@ carb+lean breakfast, fatty dinner.
     current selection). Used by both slots and restriction rules.
   - Legacy stored settings lack the new fields — all read sites use
     `?? []` / `?? null`; no storage-key bump needed.
+- **v3 additions** (same session):
+  - **'Dairy & Eggs' SPLIT into 'Dairy' + 'Eggs'** (user: separate roles,
+    e.g. eggs+milk breakfast). Seed foods reclassified (16 Dairy / 4 Eggs);
+    CATEGORY_ORDER now ALPHABETICAL (user request); App.js self-heals:
+    seed refresh also triggers on category mismatch, user foods on the old
+    category migrate by egg-in-name heuristic, planner settings lists split
+    the old value into both (helpers LEGACY_DAIRY_EGGS/splitDairyEggs).
+  - **Weekly micro pacing**: microGain = 0.5·daily-capped + 0.5·week-pace
+    gain (target rda×pace over rolling 7-day window, reset each week) →
+    week/month plans chase the week's laggard nutrients toward TRUE 100%
+    weekly (periodMicroCoverage helper; UI shows per-week divider bars).
+  - **Amount display in grams**: fmtPlannedAmount → "150g" (nearest 5g)
+    when servingWeightGrams known, else "1.5 × label". New cap
+    MAX_GRAMS_PER_ITEM=450 (stops 960g-coconut-water portions).
+  - **Recommendations**: settings.includeRecommendations (Sparkles toggle
+    above Generate). Non-pantry foods join the pool at 0.75 handicap;
+    winners get item.recommended=true (★ + X in plan rows). X → Alert
+    "another recommendation?" — No = pantry swap, Yes = next-optimal
+    (suggestReplacement(); rejected chain excluded via component state;
+    honors restriction/composition/no-repeat, 2-pass relax for tiny pantries).
+  - **MealPlanDetailPage** ('PlanMealDetail' route): tap any meal card
+    header → detail: macro hero, editable amounts (grams inline), remove /
+    add foods (pantry-first search), full NUTRIENT_SECTIONS RDA bars, tap
+    food name → FoodDetail. Edits write back into the persisted mealPlan.
+  - **FoodAdder**: sort button (List icon, top right): Most liked / A–Z;
+    typing in search now SUPERSEDES the category chip (chips dim at 40%
+    while searching).
+  - **Bugfix**: RestPage crashed on render — it imported `Sun` from
+    Icons.tsx which was never exported. Added Sun (wb-sunny). When
+    "Element type is invalid" appears, check Icons exports first.
 - Persisted: `plannerSettings`, `mealPlan` keys. AI layer: NOT built yet —
   planned as optional refine layer reusing coach providers ("maybe AI if not
   too demanding" — rules core was the agreed architecture).
