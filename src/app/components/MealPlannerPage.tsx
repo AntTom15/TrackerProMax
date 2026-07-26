@@ -661,13 +661,28 @@ export default function MealPlannerPage({
           ).map((weekDays, wi) => (
             <View key={wi}>
               {plan.days.length > 1 && (
-                <View style={styles.weekDivider}>
+                <Pressable
+                  onPress={() =>
+                    (navigation as any).navigate('PlanWeekSummary', {
+                      weekIndex: wi,
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.weekDivider,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
                   <Text style={styles.weekDividerText}>Week {wi + 1}</Text>
-                  <Text style={styles.weekDividerMeta}>
-                    {Math.round(periodMicroCoverage(weekDays, foodById) * 100)}
-                    % micros over the week
-                  </Text>
-                </View>
+                  <View style={styles.weekDividerRight}>
+                    <Text style={styles.weekDividerMeta}>
+                      {Math.round(
+                        periodMicroCoverage(weekDays, foodById) * 100
+                      )}
+                      % micros over the week
+                    </Text>
+                    <ChevronRight size={14} color={c.textMuted} />
+                  </View>
+                </Pressable>
               )}
               {weekDays.map((day) => {
             const open = !!openDays[day.date];
@@ -1372,6 +1387,11 @@ const createStyles = (c: ThemeColors) =>
       color: c.textMuted,
       fontFamily: 'Barlow Condensed',
       fontWeight: '600',
+    },
+    weekDividerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
     },
     mealCardTitle: {
       fontSize: 14,

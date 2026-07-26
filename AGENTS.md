@@ -200,6 +200,10 @@ carb+lean breakfast, fatty dinner.
   - **Bugfix**: RestPage crashed on render — it imported `Sun` from
     Icons.tsx which was never exported. Added Sun (wb-sunny). When
     "Element type is invalid" appears, check Icons exports first.
+  - **Week summary** (`MealPlanWeekSummaryPage`, 'PlanWeekSummary' route):
+    tap a week divider bar → weekly totals (kcal + per-day avg, macro
+    cards w/ per-day), full NUTRIENT_SECTIONS bars vs RDA × block-days,
+    weekly micro coverage hero. No per-food list by design.
 - Persisted: `plannerSettings`, `mealPlan` keys. AI layer: NOT built yet —
   planned as optional refine layer reusing coach providers ("maybe AI if not
   too demanding" — rules core was the agreed architecture).

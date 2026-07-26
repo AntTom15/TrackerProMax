@@ -31,6 +31,7 @@ import NutritionSummaryPage from './src/app/components/NutritionSummaryPage';
 import LogFoodPickerPage from './src/app/components/LogFoodPickerPage';
 import MealPlannerPage from './src/app/components/MealPlannerPage';
 import MealPlanDetailPage from './src/app/components/MealPlanDetailPage';
+import MealPlanWeekSummaryPage from './src/app/components/MealPlanWeekSummaryPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -162,6 +163,11 @@ function DietStack({ store }) {
             plan={store.mealPlan}
             onSetPlan={store.setMealPlan}
           />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="PlanWeekSummary" options={{ title: 'Week Summary' }}>
+        {() => (
+          <MealPlanWeekSummaryPage foods={foods} plan={store.mealPlan} />
         )}
       </Stack.Screen>
       <Stack.Screen name="DietRecs" options={{ title: 'Diet Recommendations' }}>
