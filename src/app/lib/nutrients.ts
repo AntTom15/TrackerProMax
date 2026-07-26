@@ -1,15 +1,40 @@
-import type { NutrientKey } from './types';
+import type { Nutrients, NutrientKey } from './types';
+
+// Keys that are COMPUTED from other nutrients rather than stored on a
+// food. They never appear in Food.nutrients, so anything reading raw
+// food values must skip them (see MICRO_RDA in mealPlanner.ts).
+export type DerivedNutrientKey = 'vitaminKTotal';
+
+// Fraction of vitamin K1 that counts toward K2 status. Humans do
+// convert K1 (phylloquinone) into MK-4 in tissue, but the efficiency is
+// genuinely uncertain — published estimates span roughly 5–25% and vary
+// by tissue and dose. 10% is a deliberately conservative middle figure;
+// treat the derived total as a rough indicator, not a measurement.
+export const K1_TO_K2_CONVERSION = 0.1;
 
 // Display metadata + adult daily targets for every tracked nutrient.
 // RDA values follow FDA Daily Values (adults, 2000 kcal diet) where one
 // exists; omega-3/6 use NIH Adequate Intake. `rda: undefined` means no
 // established daily value — the summary shows the amount without a bar.
 export interface NutrientInfo {
-  key: NutrientKey;
+  key: NutrientKey | DerivedNutrientKey;
   label: string;
   unit: string;
   rda?: number;
+  // Present only on computed rows. `sources` lists the raw keys it is
+  // built from, so "does this food have it?" checks still work.
+  derive?: (n: Nutrients) => number;
+  sources?: NutrientKey[];
 }
+
+// Single accessor for both stored and derived rows.
+export const nutrientAmount = (
+  info: NutrientInfo,
+  nutrients: Nutrients | undefined
+): number => {
+  const n = nutrients ?? {};
+  return info.derive ? info.derive(n) : (n[info.key as NutrientKey] ?? 0);
+};
 
 export interface NutrientSection {
   title: string;
@@ -57,6 +82,18 @@ export const NUTRIENT_SECTIONS: NutrientSection[] = [
       { key: 'vitaminE', label: 'Vitamin E', unit: 'mg', rda: 15 },
       { key: 'vitaminK1', label: 'Vitamin K1', unit: 'mcg', rda: 120 },
       { key: 'vitaminK2', label: 'Vitamin K2', unit: 'mcg' },
+      {
+        key: 'vitaminKTotal',
+        label: 'Total Vitamin K (K2-eq)',
+        unit: 'mcg',
+        // No official K2 requirement exists. 120 mcg is the FDA Daily
+        // Value for vitamin K (set on K1) — used here purely as a
+        // reference line so the row has something to fill against.
+        rda: 120,
+        sources: ['vitaminK1', 'vitaminK2'],
+        derive: (n) =>
+          (n.vitaminK2 ?? 0) + (n.vitaminK1 ?? 0) * K1_TO_K2_CONVERSION,
+      },
       { key: 'choline', label: 'Choline', unit: 'mg', rda: 550 },
     ],
   },

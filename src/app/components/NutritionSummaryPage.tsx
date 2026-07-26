@@ -8,8 +8,8 @@ import {
 import { format, parseISO, isToday } from 'date-fns';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft } from './Icons';
-import { NUTRIENT_SECTIONS } from '../lib/nutrients';
-import type { Food, LogEntry, NutrientKey } from '../lib/types';
+import { NUTRIENT_SECTIONS, nutrientAmount } from '../lib/nutrients';
+import type { Food, LogEntry, NutrientKey, Nutrients } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 
 interface NutritionSummaryPageProps {
@@ -31,11 +31,16 @@ export default function NutritionSummaryPage({
   const foodById = new Map(foods.map((f) => [f.id, f]));
   const dayEntries = log.filter((e) => e.date === date);
 
-  const total = (key: NutrientKey) =>
-    dayEntries.reduce((sum, e) => {
-      const food = foodById.get(e.foodId);
-      return sum + (food?.nutrients?.[key] ?? 0) * e.servings;
-    }, 0);
+  // Day totals for every stored nutrient; derived rows (e.g. Total
+  // Vitamin K) are computed from these by nutrientAmount().
+  const totals: Nutrients = {};
+  for (const e of dayEntries) {
+    const food = foodById.get(e.foodId);
+    for (const [k, v] of Object.entries(food?.nutrients ?? {})) {
+      if (typeof v !== 'number') continue;
+      totals[k as NutrientKey] = (totals[k as NutrientKey] ?? 0) + v * e.servings;
+    }
+  }
 
   const dateObj = parseISO(date);
   const dateLabel = isToday(dateObj) ? 'Today' : format(dateObj, 'EEEE, MMM d');
@@ -67,8 +72,9 @@ export default function NutritionSummaryPage({
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.card}>
-              {section.items.map(({ key, label, unit, rda }) => {
-                const value = total(key);
+              {section.items.map((info) => {
+                const { key, label, unit, rda } = info;
+                const value = nutrientAmount(info, totals);
                 const pct = rda ? Math.min((value / rda) * 100, 100) : null;
                 const pctLabel = rda ? Math.round((value / rda) * 100) : null;
                 return (
@@ -104,6 +110,12 @@ export default function NutritionSummaryPage({
         <Text style={styles.footnote}>
           % values are relative to standard adult daily targets (FDA Daily
           Values). Personalised targets are coming with AI recommendations.
+          {'\n\n'}
+          Total Vitamin K counts K2 in full plus 10% of K1, a conservative
+          estimate of how much K1 the body converts — published figures vary
+          widely, so read it as a rough indicator. There is no official K2
+          requirement; its bar uses the 120 mcg vitamin K Daily Value as a
+          reference point only.
         </Text>
 
         <View style={{ height: 40 }} />

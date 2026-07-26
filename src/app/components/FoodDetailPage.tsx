@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { X, Plus, Check, ThumbsUp, ThumbsDown } from './Icons';
-import { NUTRIENT_SECTIONS } from '../lib/nutrients';
+import { NUTRIENT_SECTIONS, nutrientAmount } from '../lib/nutrients';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 import type { Food, MyVotes, VoteDirection } from '../lib/types';
 
@@ -114,20 +114,24 @@ export default function FoodDetailPage({
       {/* Full nutrient profile */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {NUTRIENT_SECTIONS.map((section) => {
-          const items = section.items.filter(
-            ({ key }) => food.nutrients?.[key] !== undefined
+          const items = section.items.filter((info) =>
+            // Derived rows show when any of their sources is present.
+            info.sources
+              ? info.sources.some((k) => food.nutrients?.[k] !== undefined)
+              : food.nutrients?.[info.key as keyof typeof food.nutrients] !==
+                undefined
           );
           if (items.length === 0) return null;
           return (
             <View key={section.title} style={styles.section}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
               <View style={styles.card}>
-                {items.map(({ key, label, unit }) => (
-                  <View key={key} style={styles.row}>
-                    <Text style={styles.rowLabel}>{label}</Text>
+                {items.map((info) => (
+                  <View key={info.key} style={styles.row}>
+                    <Text style={styles.rowLabel}>{info.label}</Text>
                     <Text style={styles.rowValue}>
-                      {fmt(food.nutrients?.[key] ?? 0)}
-                      <Text style={styles.rowUnit}> {unit}</Text>
+                      {fmt(nutrientAmount(info, food.nutrients))}
+                      <Text style={styles.rowUnit}> {info.unit}</Text>
                     </Text>
                   </View>
                 ))}

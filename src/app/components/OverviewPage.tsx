@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
 import { Settings, Flame, Footprints, Droplets, Moon } from './Icons';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
@@ -37,8 +38,19 @@ const fmtDur = (mins: number) => {
 
 export default function OverviewPage({ store }: OverviewPageProps) {
   const { c, styles } = useThemedStyles(createStyles);
+  const navigation = useNavigation();
   const { foods, log, sessions, water, waterGoalOz, sleep, steps, snapshotSteps } =
     store;
+
+  // Overview lives directly in the tab navigator, so jumping to a screen
+  // inside another tab's stack needs the nested form. The nonce forces
+  // params through even when the target screen is already mounted with
+  // the same values (e.g. re-tapping the same day twice).
+  const goTo = (tab: string, screen: string, params?: Record<string, unknown>) =>
+    (navigation as any).navigate(tab, {
+      screen,
+      params: { ...params, nonce: Date.now() },
+    });
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
@@ -105,8 +117,14 @@ export default function OverviewPage({ store }: OverviewPageProps) {
         ? `Yesterday ${format(ts, 'h:mm a')}`
         : format(ts, 'MMM d');
 
-  const events: { label: string; time: string; tag: string; ts: number }[] =
-    [];
+  // Each event carries its own destination so the row is tappable.
+  const events: {
+    label: string;
+    time: string;
+    tag: string;
+    ts: number;
+    onPress: () => void;
+  }[] = [];
   sessions.forEach((s) => {
     if (s.finishedAt)
       events.push({
@@ -114,6 +132,9 @@ export default function OverviewPage({ store }: OverviewPageProps) {
         time: fmtWhen(s.finishedAt),
         tag: 'Exercise',
         ts: s.finishedAt,
+        // Straight to that specific workout's summary.
+        onPress: () =>
+          goTo('ExerciseTab', 'SessionDetail', { sessionId: s.id }),
       });
   });
   log.forEach((e) => {
@@ -123,6 +144,8 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       time: fmtWhen(ts),
       tag: e.meal,
       ts,
+      // Logger opened on the day that food was eaten.
+      onPress: () => goTo('DietTab', 'Logger', { date: e.date }),
     });
   });
   sleep.forEach((e) => {
@@ -137,6 +160,7 @@ export default function OverviewPage({ store }: OverviewPageProps) {
           : format(ts, 'MMM d'),
       tag: 'Rest',
       ts,
+      onPress: () => goTo('ExerciseTab', 'Rest'),
     });
   });
   const activities = events.sort((a, b) => b.ts - a.ts).slice(0, 4);
@@ -148,6 +172,7 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       value: String(calsToday),
       sub: `${proteinToday}g protein`,
       color: c.tintOrange,
+      onPress: () => goTo('DietTab', 'Logger', { date: todayStr }),
     },
     {
       icon: <Footprints size={18} color="#60a5fa" />,
@@ -163,6 +188,10 @@ export default function OverviewPage({ store }: OverviewPageProps) {
             ? 'From your phone'
             : 'Reading motion data…',
       color: c.tintBlue,
+      // Steps come from the phone's motion chip rather than any logged
+      // workout, so there's no exact matching screen — the tracker is
+      // the closest movement hub until a steps history page exists.
+      onPress: () => goTo('ExerciseTab', 'WorkoutTracker'),
     },
     {
       icon: <Droplets size={18} color="#22d3ee" />,
@@ -170,6 +199,7 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       value: `${waterToday} oz`,
       sub: `of ${waterGoalOz} oz goal`,
       color: c.tintCyan,
+      onPress: () => goTo('DietTab', 'Logger', { date: todayStr }),
     },
     {
       icon: <Moon size={18} color="#a78bfa" />,
@@ -177,6 +207,7 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       value: lastSleep ? fmtDur(lastSleep.durationMin) : '—',
       sub: sleepSub,
       color: c.tintPurple,
+      onPress: () => goTo('ExerciseTab', 'Rest'),
     },
   ];
 
@@ -217,15 +248,20 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       {/* Quick stats grid */}
       <View style={styles.statsGrid}>
         {STAT_CARDS.map((card, i) => (
-          <View
+          <Pressable
             key={i}
-            style={[styles.statCard, { backgroundColor: card.color }]}
+            onPress={card.onPress}
+            style={({ pressed }) => [
+              styles.statCard,
+              { backgroundColor: card.color },
+              pressed && { opacity: 0.7 },
+            ]}
           >
             <View style={styles.statIcon}>{card.icon}</View>
             <Text style={styles.statLabel}>{card.label}</Text>
             <Text style={styles.statValue}>{card.value}</Text>
             <Text style={styles.statSub}>{card.sub}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -240,7 +276,14 @@ export default function OverviewPage({ store }: OverviewPageProps) {
         ) : (
           <View style={styles.activityList}>
             {activities.map((item, i) => (
-              <View key={i} style={styles.activityItem}>
+              <Pressable
+                key={i}
+                onPress={item.onPress}
+                style={({ pressed }) => [
+                  styles.activityItem,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
                 <View style={styles.activityTextContainer}>
                   <Text style={styles.activityLabel}>{item.label}</Text>
                   <Text style={styles.activityTime}>{item.time}</Text>
@@ -248,7 +291,7 @@ export default function OverviewPage({ store }: OverviewPageProps) {
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>{item.tag}</Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}

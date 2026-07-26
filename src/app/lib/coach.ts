@@ -312,6 +312,9 @@ async function llmComplete(
           'content-type': 'application/json',
           'x-api-key': settings.claudeKey.trim(),
           'anthropic-version': '2023-06-01',
+          // React Native has no CORS, but Expo Web does — without this
+          // the same build fails in a browser with an opaque CORS error.
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: settings.claudeModel.trim(),
@@ -395,6 +398,7 @@ export async function testProvider(settings: CoachSettings): Promise<string> {
           'content-type': 'application/json',
           'x-api-key': settings.claudeKey.trim(),
           'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: settings.claudeModel.trim(),

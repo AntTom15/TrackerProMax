@@ -200,6 +200,34 @@ carb+lean breakfast, fatty dinner.
   - **Bugfix**: RestPage crashed on render — it imported `Sun` from
     Icons.tsx which was never exported. Added Sun (wb-sunny). When
     "Element type is invalid" appears, check Icons exports first.
+  - **Overview deep links**: stat cards + Recent Activity rows are now
+    Pressable. Calories/Water → DietTab/Logger (today), Sleep → ExerciseTab/
+    Rest, Steps → ExerciseTab/WorkoutTracker (imperfect — steps come from the
+    motion chip, not workouts; a steps-history screen would be the real
+    target). Activity rows: workout → SessionDetail{sessionId}, food →
+    Logger{date of that entry}, sleep → Rest. Overview sits directly in the
+    TAB navigator, so it uses nested navigation:
+    `navigate(tab, { screen, params })` via the local `goTo()` helper, which
+    stamps a `nonce` so params re-apply when the target is already mounted.
+    LoggerPage now reads `route.params.date` (+nonce) into its date state.
+  - **Total Vitamin K**: NUTRIENT_SECTIONS entries may now be DERIVED —
+    `derive(n)` + `sources[]` + key of type DerivedNutrientKey. Read every
+    row through `nutrientAmount(info, nutrients)` (never `n[info.key]`).
+    'vitaminKTotal' = K2 + K1×K1_TO_K2_CONVERSION (0.1, deliberately
+    conservative; real conversion is uncertain ~5-25%). rda 120 is the K1
+    Daily Value used as a reference line only — there is no official K2 RDA
+    (caveat is spelled out in NutritionSummaryPage's footnote).
+    **CRITICAL**: mealPlanner's MICRO_RDA skips `item.derive` entries —
+    foods never carry a derived key, so scoring one would add a permanently
+    zero term and cap weekly coverage below 100%. Verified: coverage stayed
+    at 97.2% after the change. The planner still does NOT optimize K2
+    (no DV) — a possible future refinement.
+  - **AI Coach**: Claude path verified correct (endpoint, x-api-key,
+    anthropic-version 2023-06-01, content-block join, AbortController
+    timeout). Added `anthropic-dangerous-direct-browser-access: true` (no-op
+    on native, prevents CORS failure under Expo Web) and model quick-pick
+    chips (Haiku 4.5 / Sonnet 5 / Opus 5; field stays free-text). Default
+    `claude-haiku-4-5-20251001` re-verified as current (July 2026).
   - **Week summary** (`MealPlanWeekSummaryPage`, 'PlanWeekSummary' route):
     tap a week divider bar → weekly totals (kcal + per-day avg, macro
     cards w/ per-day), full NUTRIENT_SECTIONS bars vs RDA × block-days,

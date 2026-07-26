@@ -29,6 +29,15 @@ import type {
 } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 
+// Quick-pick models, cheapest first. The field stays free-text so any
+// other model ID still works; verified against Anthropic's model list
+// (July 2026). Dated IDs are pinned snapshots.
+const CLAUDE_MODELS = [
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { id: 'claude-opus-5', label: 'Opus 5' },
+];
+
 interface AICoachPageProps {
   store: {
     foods: Food[];
@@ -228,9 +237,35 @@ export default function AICoachPage({ store }: AICoachPageProps) {
                   autoCorrect={false}
                   style={styles.fieldInput}
                 />
+                {/* Quick picks so the exact IDs don't have to be typed */}
+                <View style={styles.modelChips}>
+                  {CLAUDE_MODELS.map((m) => {
+                    const active = store.coachClaudeModel.trim() === m.id;
+                    return (
+                      <Pressable
+                        key={m.id}
+                        onPress={() => store.setCoachClaudeModel(m.id)}
+                        style={[
+                          styles.modelChip,
+                          active && styles.modelChipActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.modelChipText,
+                            active && styles.modelChipTextActive,
+                          ]}
+                        >
+                          {m.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
                 <Text style={styles.fieldHint}>
-                  Your key is stored on this device only and sent directly to
-                  Anthropic.
+                  Haiku is cheapest and fine for daily suggestions; step up to
+                  Sonnet or Opus for harder reasoning in chat. Your key is
+                  stored on this device only and sent directly to Anthropic.
                 </Text>
               </>
             ) : (
@@ -516,6 +551,36 @@ const createStyles = (c: ThemeColors) =>
       color: c.text,
       fontFamily: 'DM Sans',
       marginBottom: 10,
+    },
+    modelChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    modelChip: {
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+    },
+    modelChipActive: {
+      backgroundColor: c.accent,
+      borderColor: c.text,
+    },
+    modelChipText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    modelChipTextActive: {
+      color: c.onAccent,
     },
     fieldHint: {
       fontSize: 10,

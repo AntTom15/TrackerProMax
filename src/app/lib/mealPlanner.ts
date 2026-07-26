@@ -113,8 +113,12 @@ const MICRO_RDA: { key: NutrientKey; rda: number }[] = (() => {
     if (!wanted.has(section.title)) continue;
     for (const item of section.items) {
       if (!item.rda) continue;
+      // Derived rows (e.g. Total Vitamin K) are computed for display
+      // only — foods never carry the key, so scoring against them would
+      // add a permanently-zero term and cap coverage below 100%.
+      if (item.derive) continue;
       if (item.key === 'sodium' || item.key === 'chloride') continue;
-      out.push({ key: item.key, rda: item.rda });
+      out.push({ key: item.key as NutrientKey, rda: item.rda });
     }
   }
   out.push({ key: 'omega3', rda: 1600 });

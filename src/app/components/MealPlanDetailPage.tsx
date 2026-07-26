@@ -10,7 +10,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Search, Sparkles, X } from './Icons';
-import { NUTRIENT_SECTIONS } from '../lib/nutrients';
+import { NUTRIENT_SECTIONS, nutrientAmount } from '../lib/nutrients';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 import NumericInput from './components2/NumericInput';
 import { fmtPlannedAmount, mealTotals } from '../lib/mealPlanner';
@@ -327,7 +327,7 @@ export default function MealPlanDetailPage({
           <View key={section.title} style={styles.nutrientCard}>
             <Text style={styles.nutrientSectionTitle}>{section.title}</Text>
             {section.items.map((info) => {
-              const amount = (totals as any)[info.key] ?? 0;
+              const amount = nutrientAmount(info, totals);
               const pct = info.rda ? amount / info.rda : null;
               return (
                 <View key={info.key} style={styles.nutrientRow}>

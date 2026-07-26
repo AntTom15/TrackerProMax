@@ -8,7 +8,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
 import { ChevronLeft } from './Icons';
-import { NUTRIENT_SECTIONS } from '../lib/nutrients';
+import { NUTRIENT_SECTIONS, nutrientAmount } from '../lib/nutrients';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 import { periodMicroCoverage } from '../lib/mealPlanner';
 import type { Food, MealPlan, Nutrients } from '../lib/types';
@@ -142,7 +142,7 @@ export default function MealPlanWeekSummaryPage({
           <View key={section.title} style={styles.nutrientCard}>
             <Text style={styles.nutrientSectionTitle}>{section.title}</Text>
             {section.items.map((info) => {
-              const amount = (totals as any)[info.key] ?? 0;
+              const amount = nutrientAmount(info, totals);
               const weekTarget = info.rda ? info.rda * numDays : null;
               const pct = weekTarget ? amount / weekTarget : null;
               return (

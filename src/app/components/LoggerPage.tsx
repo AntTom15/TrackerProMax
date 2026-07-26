@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 import { format, addDays, parseISO, isToday } from 'date-fns';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Droplets, Plus, X } from './Icons';
 import { MEALS } from '../lib/constants';
 import type { Food, LogEntry, MealName } from '../lib/types';
@@ -53,7 +53,17 @@ export default function LoggerPage({
 }: LoggerPageProps) {
   const { c, styles } = useThemedStyles(createStyles);
   const navigation = useNavigation();
-  const [date, setDate] = useState(todayKey());
+  const route = useRoute();
+  // Deep links (e.g. Overview → a logged food) open the logger on a
+  // specific day. `nonce` changes per navigation so re-opening the same
+  // date still snaps back to it after manual date paging.
+  const params = route.params as
+    | { date?: string; nonce?: number }
+    | undefined;
+  const [date, setDate] = useState(params?.date ?? todayKey());
+  useEffect(() => {
+    if (params?.date) setDate(params.date);
+  }, [params?.date, params?.nonce]);
   // Collapsed sections ('Water' or a meal name). Default: all expanded.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleSection = (key: string) =>
