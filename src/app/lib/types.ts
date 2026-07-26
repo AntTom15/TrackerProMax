@@ -81,6 +81,58 @@ export interface LogEntry {
   loggedAt: number;
 }
 
+// ---------------- Meal Planner ----------------
+
+// What a meal slot should look like, macro-wise. 'carb-lean' = carb
+// sources + lean protein (e.g. Randle-cycle-conscious morning meal);
+// 'fatty' = fat-dominant foods; 'high-protein' = protein-anchored;
+// 'balanced' = no macro steering.
+export type SlotArchetype = 'carb-lean' | 'fatty' | 'high-protein' | 'balanced';
+
+// One meal slot in the user's day template. `meal` decides which Logger
+// section a generated meal logs into.
+export interface MealSlot {
+  id: string;
+  name: string;
+  meal: MealName;
+  archetype: SlotArchetype;
+}
+
+// User-defined generation settings. calorieTarget is matched tightly;
+// the optional macro percents (must total ≤ 100 when set) are soft
+// targets with a wide tolerance by design.
+export interface PlannerSettings {
+  calorieTarget: number;
+  proteinPct: number | null;
+  carbPct: number | null;
+  fatPct: number | null;
+  slots: MealSlot[];
+}
+
+export interface PlannedItem {
+  foodId: string;
+  servings: number;
+}
+
+export interface PlannedMeal {
+  slotId: string;
+  slotName: string;
+  meal: MealName;
+  items: PlannedItem[];
+}
+
+export interface PlannedDay {
+  date: string; // YYYY-MM-DD
+  meals: PlannedMeal[];
+}
+
+export interface MealPlan {
+  id: string;
+  createdAt: number;
+  seed: number;
+  days: PlannedDay[];
+}
+
 // ---------------- Exercise ----------------
 
 export type ExerciseKind = 'strength' | 'cardio';

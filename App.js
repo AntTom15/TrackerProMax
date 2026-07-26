@@ -12,6 +12,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Dumbbell, Utensils, User } from './src/app/components/Icons';
 
 import { usePersistedState, STORAGE_KEYS } from './src/app/lib/storage';
+import { DEFAULT_PLANNER_SETTINGS } from './src/app/lib/mealPlanner';
 import { SEED_FOODS, SEED_PANTRY_IDS } from './src/app/lib/seedData';
 import { SEED_EXERCISES } from './src/app/lib/exerciseSeed';
 import { ThemeProvider, LIGHT, DARK, useThemeColors } from './src/app/lib/theme';
@@ -27,6 +28,7 @@ import FoodDetailPage from './src/app/components/FoodDetailPage';
 import LoggerPage from './src/app/components/LoggerPage';
 import NutritionSummaryPage from './src/app/components/NutritionSummaryPage';
 import LogFoodPickerPage from './src/app/components/LogFoodPickerPage';
+import MealPlannerPage from './src/app/components/MealPlannerPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -137,8 +139,18 @@ function DietStack({ store }) {
       >
         {() => <NutritionSummaryPage foods={foods} log={log} />}
       </Stack.Screen>
-      <Stack.Screen name="MealPresets" options={{ title: 'Meal Presets' }}>
-        {() => <BlankPage title="Meal Presets" />}
+      <Stack.Screen name="MealPresets" options={{ title: 'Meal Planner' }}>
+        {() => (
+          <MealPlannerPage
+            foods={foods}
+            pantryIds={pantryIds}
+            settings={store.plannerSettings}
+            onChangeSettings={store.updatePlannerSettings}
+            plan={store.mealPlan}
+            onSetPlan={store.setMealPlan}
+            onAddEntry={addLogEntry}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="DietRecs" options={{ title: 'Diet Recommendations' }}>
         {() => <BlankPage title="Diet Recommendations" />}
@@ -484,6 +496,18 @@ function useAppStore() {
   const setWaterForDate = (date, oz) =>
     setWater((prev) => ({ ...prev, [date]: Math.max(0, oz) }));
 
+  // ---- Meal planner: day template settings + last generated plan ----
+  const [plannerSettings, setPlannerSettings] = usePersistedState(
+    STORAGE_KEYS.plannerSettings,
+    DEFAULT_PLANNER_SETTINGS
+  );
+  const updatePlannerSettings = (patch) =>
+    setPlannerSettings((prev) => ({ ...prev, ...patch }));
+  const [mealPlan, setMealPlan] = usePersistedState(
+    STORAGE_KEYS.mealPlan,
+    null
+  );
+
   // ---- Steps (daily totals snapshotted from the phone's pedometer) ----
   const [steps, setSteps] = usePersistedState(STORAGE_KEYS.steps, {});
   // patch: { 'yyyy-MM-dd': count, ... } — merged over what's stored so
@@ -581,6 +605,10 @@ function useAppStore() {
     setWaterCupOz,
     steps,
     snapshotSteps,
+    plannerSettings,
+    updatePlannerSettings,
+    mealPlan,
+    setMealPlan,
     sleep,
     addSleepEntry,
     deleteSleepEntry,

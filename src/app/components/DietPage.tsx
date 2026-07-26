@@ -38,9 +38,9 @@ const TILES: {
   },
   {
     id: 'MealPresets',
-    label: 'Meal Presets',
+    label: 'Meal Planner',
     Icon: ChefHat,
-    desc: 'Save & reuse meals',
+    desc: 'Meals planned from your pantry',
     tint: 'tintOrange',
   },
   {

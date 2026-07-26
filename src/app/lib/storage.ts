@@ -23,6 +23,9 @@ export const STORAGE_KEYS = {
   sleep: `${PREFIX}sleep`,
   // Daily step-count snapshots (the OS only remembers ~7 days)
   steps: `${PREFIX}steps`,
+  // Meal planner: day template + last generated plan
+  plannerSettings: `${PREFIX}plannerSettings`,
+  mealPlan: `${PREFIX}mealPlan`,
   // AI Coach: provider settings + cached suggestions
   coachProvider: `${PREFIX}coachProvider`,
   coachClaudeKey: `${PREFIX}coachClaudeKey`,
