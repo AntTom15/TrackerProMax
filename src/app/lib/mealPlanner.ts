@@ -17,7 +17,7 @@
 // No fiber/carb rewards exist here — diet steering is by omission,
 // same philosophy as the coach rules engine.
 
-import { format, addDays } from 'date-fns';
+import { format, addDays, getDay } from 'date-fns';
 import type {
   Food,
   MealPlan,
@@ -42,6 +42,29 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
     { id: 'slot2', name: 'Lunch', meal: 'Lunch', archetype: 'balanced' },
     { id: 'slot3', name: 'Dinner', meal: 'Dinner', archetype: 'fatty' },
   ],
+  restrictedDays: [],
+};
+
+// Effective calorie share per slot. Explicit caloriePct values are
+// honored; slots left on "auto" split whatever percent is unclaimed.
+// If explicit shares alone exceed 100 they're scaled down (and auto
+// slots get nothing) — generatePlan warns when that happens.
+export const effectiveSlotPcts = (
+  slots: PlannerSettings['slots']
+): number[] => {
+  const explicit = slots.map((s) =>
+    typeof s.caloriePct === 'number' && s.caloriePct > 0
+      ? Math.min(100, s.caloriePct)
+      : null
+  );
+  const explicitSum = explicit.reduce((a: number, p) => a + (p ?? 0), 0);
+  const autoCount = explicit.filter((p) => p == null).length;
+  const autoShare =
+    autoCount > 0 ? Math.max(0, 100 - explicitSum) / autoCount : 0;
+  let pcts = explicit.map((p) => p ?? autoShare);
+  const total = pcts.reduce((a, b) => a + b, 0);
+  if (total > 0) pcts = pcts.map((p) => (p / total) * 100);
+  return pcts;
 };
 
 export const ARCHETYPE_LABELS: Record<MealSlot['archetype'], string> = {
@@ -216,15 +239,35 @@ const buildMeal = (
   recentUse: Map<string, number>,
   planUse: Map<string, number>,
   dayUsed: Set<string>,
-  rng: () => number
+  rng: () => number,
+  // Composition: pick #i must come from slotCategories[i]; after the
+  // list is exhausted, top-up picks may come from any of them. Empty =
+  // no composition (free pick).
+  slotCategories: string[] = []
 ): PlannedItem[] => {
   const items: PlannedItem[] = [];
   const usedHere = new Set<string>();
   let remaining = budget;
-  // 2–4 foods is the sweet spot; the serving cap can force extra picks.
-  const targetItems = budget < 350 ? 2 : budget < 650 ? 3 : 4;
+  const compositional = slotCategories.length > 0;
+  const catSet = new Set(slotCategories);
+  // Free mode: 2–4 foods by budget. Compositional: one per category
+  // (plus up to 2 top-ups if calories remain).
+  const targetItems = compositional
+    ? slotCategories.length
+    : budget < 350
+      ? 2
+      : budget < 650
+        ? 3
+        : 4;
+  const maxPicks = compositional
+    ? Math.min(slotCategories.length + 2, 7)
+    : 6;
 
-  for (let pick = 0; pick < 6 && remaining > 60; pick++) {
+  for (let pick = 0; pick < maxPicks && remaining > 60; pick++) {
+    // The category this pick is bound to (compositional mode only).
+    const requiredCat = compositional && pick < slotCategories.length
+      ? slotCategories[pick]
+      : null;
     const isLast = pick >= targetItems - 1;
     // Last pick absorbs the remainder; earlier picks take a chunk but
     // may stretch to 60% of what's left.
@@ -238,10 +281,22 @@ const buildMeal = (
     let best: { cand: Candidate; servings: number; score: number } | null =
       null;
 
+    // Pass 0 excludes foods already planned today; if that produces
+    // nothing (tiny pantry / tight restriction), pass 1 permits them.
+    for (let pass = 0; pass < 2 && !best; pass++) {
     for (const cand of candidates) {
       if (usedHere.has(cand.food.id)) continue;
       if (cand.shape.cal < MIN_CAL_PER_SERVING) continue;
-      const fit = archetypeFit(cand.shape, slot.archetype);
+      // No food twice in one day (hard rule unless nothing else fits).
+      if (pass === 0 && dayUsed.has(cand.food.id)) continue;
+      if (requiredCat && cand.food.category !== requiredCat) continue;
+      // Top-up picks in compositional mode stay within the chosen set.
+      if (compositional && !requiredCat && !catSet.has(cand.food.category))
+        continue;
+      let fit = archetypeFit(cand.shape, slot.archetype);
+      // When the user names categories explicitly, the archetype only
+      // steers — it must never veto a category they asked for.
+      if (compositional) fit = Math.max(fit, 0.3);
       if (fit <= 0) continue;
 
       const servings = Math.min(round25(chunk / cand.shape.cal), MAX_SERVINGS);
@@ -257,12 +312,10 @@ const buildMeal = (
       score *= fit;
 
       // Rotation: heavy penalty for yesterday's foods, lighter for the
-      // rest of the recent window, mild within the same plan.
+      // rest of the recent window, firmer within the same plan.
       const recent = recentUse.get(cand.food.id) ?? 0;
       const inPlan = planUse.get(cand.food.id) ?? 0;
-      score *= Math.pow(0.55, recent) * Math.pow(0.8, inPlan);
-      // Strongly avoid serving the same food twice in one day.
-      if (dayUsed.has(cand.food.id)) score *= 0.1;
+      score *= Math.pow(0.55, recent) * Math.pow(0.7, inPlan);
 
       // Optional macro targets: penalize picks that worsen deviation.
       if (
@@ -283,8 +336,14 @@ const buildMeal = (
 
       if (!best || score > best.score) best = { cand, servings, score };
     }
+    }
 
-    if (!best) break;
+    if (!best) {
+      // In compositional mode a missing category shouldn't abort the
+      // rest of the meal — move on to the next category.
+      if (requiredCat) continue;
+      break;
+    }
     items.push({ foodId: best.cand.food.id, servings: best.servings });
     usedHere.add(best.cand.food.id);
     dayUsed.add(best.cand.food.id);
@@ -389,7 +448,48 @@ export function generatePlan(
   }
 
   const foodById = new Map(foods.map((f) => [f.id, f]));
-  const perSlotBudget = settings.calorieTarget / settings.slots.length;
+
+  // Per-slot calorie budgets from explicit % + auto split.
+  const slotPcts = effectiveSlotPcts(settings.slots);
+  const explicitSum = settings.slots.reduce(
+    (a, s) =>
+      a +
+      (typeof s.caloriePct === 'number' && s.caloriePct > 0
+        ? Math.min(100, s.caloriePct)
+        : 0),
+    0
+  );
+  if (explicitSum > 100) {
+    warnings.push(
+      `Meal sizes add up to ${Math.round(explicitSum)}% — scaled down to fit 100%.`
+    );
+  }
+  const slotBudgets = slotPcts.map(
+    (p) => (settings.calorieTarget * p) / 100
+  );
+
+  // Restricted days (legacy stored settings may lack the field).
+  const restrictedDays = settings.restrictedDays ?? [];
+  const rulesForWeekday = (weekday: number) =>
+    restrictedDays.filter(
+      (r) => r.weekdays.includes(weekday) && r.allowedCategories.length > 0
+    );
+  // Warn up-front about restrictions that leave the pantry too thin.
+  for (const rule of restrictedDays) {
+    if (rule.weekdays.length === 0 || rule.allowedCategories.length === 0)
+      continue;
+    const allowed = new Set(rule.allowedCategories);
+    const usableCount = candidates.filter(
+      (cd) =>
+        allowed.has(cd.food.category) &&
+        cd.shape.cal >= MIN_CAL_PER_SERVING
+    ).length;
+    if (usableCount < 6) {
+      warnings.push(
+        `"${rule.name}" leaves only ${usableCount} usable pantry foods — stock more from its allowed categories.`
+      );
+    }
+  }
 
   const days: PlannedDay[] = [];
   // Rolling usage counts for rotation (last-2-days window + whole plan).
@@ -413,23 +513,52 @@ export function generatePlan(
     for (const id of prevPrevDayFoods)
       recentUse.set(id, (recentUse.get(id) ?? 0) + 1);
 
+    // Apply any dietary restriction matching this weekday. Multiple
+    // rules must all be satisfied → intersect their whitelists.
+    const rules = rulesForWeekday(getDay(addDays(startDate, d)));
+    let allowed: Set<string> | null = null;
+    let restrictionName: string | undefined;
+    if (rules.length > 0) {
+      allowed = new Set(rules[0].allowedCategories);
+      for (const rule of rules.slice(1)) {
+        const next = new Set(rule.allowedCategories);
+        allowed = new Set([...allowed].filter((cat) => next.has(cat)));
+      }
+      restrictionName = rules.map((r) => r.name).join(' + ');
+    }
+    const dayCandidates = allowed
+      ? candidates.filter((cd) => allowed!.has(cd.food.category))
+      : candidates;
+
     const dayUsed = new Set<string>();
-    for (const slot of settings.slots) {
+    for (let si = 0; si < settings.slots.length; si++) {
+      const slot = settings.slots[si];
+      // Slot categories that survive the day's restriction; if none
+      // do, the slot falls back to a free pick from the allowed pool.
+      const slotCats = allowed
+        ? (slot.categories ?? []).filter((cat) => allowed!.has(cat))
+        : slot.categories ?? [];
       const items = buildMeal(
         slot,
-        perSlotBudget,
-        candidates,
+        slotBudgets[si],
+        dayCandidates,
         dayTotals,
         settings,
         recentUse,
         planUse,
         dayUsed,
-        rng
+        rng,
+        slotCats
       );
-      meals.push({ slotId: slot.id, slotName: slot.name, meal: slot.meal, items });
+      meals.push({
+        slotId: slot.id,
+        slotName: slot.name,
+        meal: slot.meal,
+        items,
+      });
     }
 
-    const day: PlannedDay = { date, meals };
+    const day: PlannedDay = { date, meals, restrictionName };
     trueUpCalories(day, foodById, settings.calorieTarget);
     days.push(day);
 

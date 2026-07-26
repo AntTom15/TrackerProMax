@@ -96,6 +96,25 @@ export interface MealSlot {
   name: string;
   meal: MealName;
   archetype: SlotArchetype;
+  // Optional composition: one food from EACH listed category (leftover
+  // calories top up from the same categories). Empty/undefined = any.
+  categories?: string[];
+  // Optional share of the day's calories (1–100). null/undefined = auto:
+  // unclaimed percent splits evenly across auto slots. Lets a
+  // pre-workout snack be 10% while dinner is 40%.
+  caloriePct?: number | null;
+}
+
+// A recurring dietary restriction: on the listed weekdays, only foods
+// from `allowedCategories` may be planned (e.g. Orthodox fasting on
+// Wed/Fri = plant categories + Shellfish). If several rules hit the
+// same weekday, all must be satisfied (whitelist intersection).
+export interface RestrictedDay {
+  id: string;
+  name: string;
+  // 0 (Sunday) … 6 (Saturday), matching date-fns getDay().
+  weekdays: number[];
+  allowedCategories: string[];
 }
 
 // User-defined generation settings. calorieTarget is matched tightly;
@@ -107,6 +126,7 @@ export interface PlannerSettings {
   carbPct: number | null;
   fatPct: number | null;
   slots: MealSlot[];
+  restrictedDays: RestrictedDay[];
 }
 
 export interface PlannedItem {
@@ -124,6 +144,8 @@ export interface PlannedMeal {
 export interface PlannedDay {
   date: string; // YYYY-MM-DD
   meals: PlannedMeal[];
+  // Names of the restriction rule(s) that shaped this day, if any.
+  restrictionName?: string;
 }
 
 export interface MealPlan {

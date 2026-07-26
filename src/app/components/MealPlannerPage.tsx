@@ -16,13 +16,15 @@ import {
   Plus,
   X,
 } from './Icons';
-import { MEALS } from '../lib/constants';
+import { MEALS, PLANT_CATEGORIES, WEEKDAY_LABELS } from '../lib/constants';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 import NumericInput from './components2/NumericInput';
+import CategoryPickerModal from './components2/CategoryPickerModal';
 import {
   ARCHETYPE_LABELS,
   dayMicroCoverage,
   dayTotals,
+  effectiveSlotPcts,
   generatePlan,
   mealTotals,
 } from '../lib/mealPlanner';
@@ -33,6 +35,7 @@ import type {
   MealSlot,
   PlannedMeal,
   PlannerSettings,
+  RestrictedDay,
   SlotArchetype,
 } from '../lib/types';
 
@@ -81,9 +84,18 @@ export default function MealPlannerPage({
 
   const foodById = new Map(foods.map((f) => [f.id, f]));
 
+  // Legacy stored settings may predate restrictedDays.
+  const restrictedDays = settings.restrictedDays ?? [];
+
   const [setupOpen, setSetupOpen] = useState(!plan || plan.days.length === 0);
   const [horizonDays, setHorizonDays] = useState<1 | 7 | 28>(1);
   const [warnings, setWarnings] = useState<string[]>([]);
+  // Which entity the category picker subscreen is editing.
+  const [pickerTarget, setPickerTarget] = useState<
+    { kind: 'slot' | 'restriction'; id: string } | null
+  >(null);
+  // Local text mirrors for per-slot % inputs, keyed by slot id.
+  const [pctTexts, setPctTexts] = useState<Record<string, string>>({});
   // Which plan days are expanded; day 0 starts open.
   const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
   // Meals already logged this visit (slotId|date), to disable the button.
@@ -147,6 +159,68 @@ export default function MealPlannerPage({
     const idx = MEALS.indexOf(slot.meal);
     updateSlot(slot.id, { meal: MEALS[(idx + 1) % MEALS.length] });
   };
+  const commitSlotPct = (slot: MealSlot, t: string) => {
+    setPctTexts((prev) => ({ ...prev, [slot.id]: t }));
+    const v = parseInt(t, 10);
+    updateSlot(slot.id, {
+      caloriePct: isFinite(v) && v > 0 && v <= 100 ? v : null,
+    });
+  };
+
+  // ---- restricted-day rules ----
+  const updateRestriction = (id: string, patch: Partial<RestrictedDay>) => {
+    onChangeSettings({
+      restrictedDays: restrictedDays.map((r) =>
+        r.id === id ? { ...r, ...patch } : r
+      ),
+    });
+  };
+  const removeRestriction = (id: string) => {
+    onChangeSettings({
+      restrictedDays: restrictedDays.filter((r) => r.id !== id),
+    });
+  };
+  const addRestriction = () => {
+    if (restrictedDays.length >= 4) return;
+    onChangeSettings({
+      restrictedDays: [
+        ...restrictedDays,
+        {
+          id: `rd${Date.now()}`,
+          name: 'Fast day',
+          weekdays: [],
+          // Plants pre-selected — the common fasting baseline; tweak in
+          // the picker (e.g. add Shellfish).
+          allowedCategories: [...PLANT_CATEGORIES],
+        },
+      ],
+    });
+  };
+  const toggleWeekday = (rule: RestrictedDay, weekday: number) => {
+    updateRestriction(rule.id, {
+      weekdays: rule.weekdays.includes(weekday)
+        ? rule.weekdays.filter((w) => w !== weekday)
+        : [...rule.weekdays, weekday],
+    });
+  };
+
+  // The entity currently in the category picker.
+  const pickerSlot =
+    pickerTarget?.kind === 'slot'
+      ? settings.slots.find((s) => s.id === pickerTarget.id)
+      : undefined;
+  const pickerRule =
+    pickerTarget?.kind === 'restriction'
+      ? restrictedDays.find((r) => r.id === pickerTarget.id)
+      : undefined;
+
+  const slotPcts = effectiveSlotPcts(settings.slots);
+  const categorySummary = (cats: string[] | undefined, emptyLabel: string) =>
+    !cats || cats.length === 0
+      ? emptyLabel
+      : cats.length <= 2
+        ? cats.join(', ')
+        : `${cats[0]} +${cats.length - 1}`;
 
   // ---- generation ----
   const generate = () => {
@@ -257,7 +331,7 @@ export default function MealPlannerPage({
             </Text>
 
             {/* Slots */}
-            {settings.slots.map((slot) => (
+            {settings.slots.map((slot, si) => (
               <View key={slot.id} style={styles.slotCard}>
                 <View style={styles.slotTopRow}>
                   <TextInput
@@ -267,6 +341,23 @@ export default function MealPlannerPage({
                     placeholderTextColor={c.textFaint}
                     style={styles.slotNameInput}
                   />
+                  {/* Meal size: % of daily calories; blank = auto */}
+                  <View style={styles.pctWrap}>
+                    <NumericInput
+                      value={
+                        pctTexts[slot.id] ??
+                        (typeof slot.caloriePct === 'number' &&
+                        slot.caloriePct > 0
+                          ? String(slot.caloriePct)
+                          : '')
+                      }
+                      onChangeText={(t: string) => commitSlotPct(slot, t)}
+                      placeholder={String(Math.round(slotPcts[si] ?? 0))}
+                      placeholderTextColor={c.textFaint}
+                      style={styles.pctInput}
+                    />
+                    <Text style={styles.pctSign}>%</Text>
+                  </View>
                   <Pressable
                     onPress={() => cycleMeal(slot)}
                     style={styles.mealChip}
@@ -304,12 +395,99 @@ export default function MealPlannerPage({
                     </Pressable>
                   ))}
                 </View>
+                {/* Composition: which food categories build this meal */}
+                <Pressable
+                  onPress={() =>
+                    setPickerTarget({ kind: 'slot', id: slot.id })
+                  }
+                  style={styles.categoriesRow}
+                  hitSlop={4}
+                >
+                  <Text style={styles.categoriesLabel}>Foods</Text>
+                  <Text style={styles.categoriesValue} numberOfLines={1}>
+                    {categorySummary(slot.categories, 'Any — engine picks')}
+                  </Text>
+                  <ChevronDown size={14} color={c.textMuted} />
+                </Pressable>
               </View>
             ))}
 
             <Pressable onPress={addSlot} style={styles.addSlotBtn}>
               <Plus size={14} color={c.textMuted} />
               <Text style={styles.addSlotText}>Add meal slot</Text>
+            </Pressable>
+
+            {/* ---- Restricted days ---- */}
+            <Text style={styles.subsectionTitle}>Restricted Days</Text>
+            <Text style={styles.hint}>
+              On these weekdays only the allowed foods are planned — e.g. a
+              fast day of plants + shellfish.
+            </Text>
+            {restrictedDays.map((rule) => (
+              <View key={rule.id} style={styles.slotCard}>
+                <View style={styles.slotTopRow}>
+                  <TextInput
+                    value={rule.name}
+                    onChangeText={(t) =>
+                      updateRestriction(rule.id, { name: t })
+                    }
+                    placeholder="Rule name"
+                    placeholderTextColor={c.textFaint}
+                    style={styles.slotNameInput}
+                  />
+                  <Pressable
+                    onPress={() => removeRestriction(rule.id)}
+                    style={styles.slotRemove}
+                    hitSlop={4}
+                  >
+                    <X size={12} color={c.textMuted} />
+                  </Pressable>
+                </View>
+                <View style={styles.weekdayRow}>
+                  {WEEKDAY_LABELS.map((label, wd) => {
+                    const active = rule.weekdays.includes(wd);
+                    return (
+                      <Pressable
+                        key={wd}
+                        onPress={() => toggleWeekday(rule, wd)}
+                        style={[
+                          styles.weekdayChip,
+                          active && styles.weekdayChipActive,
+                        ]}
+                        hitSlop={2}
+                      >
+                        <Text
+                          style={[
+                            styles.weekdayChipText,
+                            active && styles.weekdayChipTextActive,
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Pressable
+                  onPress={() =>
+                    setPickerTarget({ kind: 'restriction', id: rule.id })
+                  }
+                  style={styles.categoriesRow}
+                  hitSlop={4}
+                >
+                  <Text style={styles.categoriesLabel}>Allowed</Text>
+                  <Text style={styles.categoriesValue} numberOfLines={1}>
+                    {rule.allowedCategories.length === 0
+                      ? 'Nothing selected yet'
+                      : `${rule.allowedCategories.length} categories`}
+                  </Text>
+                  <ChevronDown size={14} color={c.textMuted} />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable onPress={addRestriction} style={styles.addSlotBtn}>
+              <Plus size={14} color={c.textMuted} />
+              <Text style={styles.addSlotText}>Add restricted day</Text>
             </Pressable>
           </View>
         )}
@@ -369,7 +547,16 @@ export default function MealPlannerPage({
                   style={styles.dayHeader}
                   hitSlop={4}
                 >
-                  <Text style={styles.dayTitle}>{label}</Text>
+                  <View style={styles.dayTitleRow}>
+                    <Text style={styles.dayTitle}>{label}</Text>
+                    {!!day.restrictionName && (
+                      <View style={styles.restrictionBadge}>
+                        <Text style={styles.restrictionBadgeText}>
+                          {day.restrictionName}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <View style={styles.dayHeaderRight}>
                     <Text style={styles.dayMeta}>
                       {Math.round(t.calories)} kcal ·{' '}
@@ -469,6 +656,36 @@ export default function MealPlannerPage({
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Category picker subscreen (slots & restricted days) */}
+      <CategoryPickerModal
+        visible={pickerTarget != null}
+        title={
+          pickerSlot
+            ? `${pickerSlot.name || 'Meal'} — foods`
+            : pickerRule
+              ? `${pickerRule.name || 'Rule'} — allowed foods`
+              : ''
+        }
+        subtitle={
+          pickerSlot
+            ? 'One food from each category builds this meal. None = engine picks freely.'
+            : 'Only these categories are planned on the selected weekdays.'
+        }
+        selected={
+          pickerSlot
+            ? pickerSlot.categories ?? []
+            : pickerRule
+              ? pickerRule.allowedCategories
+              : []
+        }
+        onChange={(cats) => {
+          if (pickerSlot) updateSlot(pickerSlot.id, { categories: cats });
+          else if (pickerRule)
+            updateRestriction(pickerRule.id, { allowedCategories: cats });
+        }}
+        onClose={() => setPickerTarget(null)}
+      />
     </View>
   );
 }
@@ -677,6 +894,117 @@ const createStyles = (c: ThemeColors) =>
       borderColor: c.text,
       paddingHorizontal: 12,
       paddingVertical: 9,
+    },
+    subsectionTitle: {
+      fontSize: 11,
+      letterSpacing: 0.8,
+      color: c.text,
+      fontWeight: '700',
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      marginTop: 14,
+      marginBottom: 4,
+    },
+    pctWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    pctInput: {
+      width: 40,
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 4,
+      paddingVertical: 6,
+      fontSize: 12,
+      color: c.text,
+      fontFamily: 'DM Sans',
+      textAlign: 'center',
+    },
+    pctSign: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+    },
+    categoriesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.border,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    categoriesLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    categoriesValue: {
+      flex: 1,
+      fontSize: 12,
+      color: c.text,
+      fontFamily: 'DM Sans',
+    },
+    weekdayRow: {
+      flexDirection: 'row',
+      gap: 6,
+      marginBottom: 2,
+    },
+    weekdayChip: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 2,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    weekdayChipActive: {
+      backgroundColor: c.primary,
+      borderColor: c.text,
+    },
+    weekdayChipText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+    },
+    weekdayChipTextActive: {
+      color: c.onPrimary,
+    },
+    dayTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flex: 1,
+      marginRight: 8,
+    },
+    restrictionBadge: {
+      borderRadius: 8,
+      backgroundColor: c.tintPurple,
+      borderWidth: 1,
+      borderColor: c.text,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    restrictionBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: c.text,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
     },
     addSlotText: {
       fontSize: 12,
