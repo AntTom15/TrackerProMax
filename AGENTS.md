@@ -1,7 +1,8 @@
 # TrackerProMax — Agent Handoff & Project Guide
 
-> Last updated 2026-07-26 after a long build session. This file is the source
-> of truth for any agent picking up this project. Read it fully before coding.
+> Last updated 2026-07-26 (second session: git init, freeform log amounts,
+> Pedometer steps, Meal Planner v1). This file is the source of truth for any
+> agent picking up this project. Read it fully before coding.
 
 ## Expo has changed
 Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/
@@ -43,6 +44,10 @@ accounts/backend deliberately deferred until sync or community features require 
     Biceps, Triceps, Forearms, Quads, Hamstrings, Glutes, Calves, Core, Full Body.
   - `nutrients.ts` — NUTRIENT_SECTIONS with labels/units/RDAs.
   - `coach.ts` — the whole AI Coach core (see below).
+  - `steps.ts` — `useSteps(onSnapshot)`: Pedometer (expo-sensors) daily step
+    totals; OS remembers ~7 days so totals snapshot into `steps` storage.
+    iOS-only queries (Android → card shows unavailable). No Watch data.
+  - `mealPlanner.ts` — deterministic meal-plan generator (see Meal Planner).
 
 ## Design system (neo-brutalist)
 2px ink borders (`c.text`), hard offset shadows (shadowColor `c.shadow`,
@@ -56,7 +61,12 @@ prop is silently dropped (no transforms; use dedicated icon variants).
 - **Diet tab**: Pantry (collapsible categories, drag reorder, tap→FoodDetail),
   FoodAdder (category chips, voting), FoodDetail (full 42-nutrient profile),
   Logger (per-day; collapsible Water/Breakfast/Lunch/Dinner/Snacks sections;
-  tap a logged food → FoodDetail; totals → NutritionSummary with RDAs),
+  tap a logged food → FoodDetail; totals → NutritionSummary with RDAs;
+  FREEFORM AMOUNTS: picker rows expand to an amount editor [servings/g/oz —
+  weight units only when servingWeightGrams known], + icon = quick 1 serving;
+  in the Logger tap the servings number to type an exact value, ±0.5 steppers
+  stay, 0 removes),
+  **Meal Planner** (MealPresets route, was BlankPage — see section below),
   Water tracker (Cronometer-style cups = goal÷cupSize, partial bottom-up fill,
   custom-oz add, overflow cups past goal; goal & cup size in Profile).
 - **Exercise tab** (2×2 tiles): Plan Maker (multi-day plans ≤10 days, explicit
@@ -71,9 +81,10 @@ prop is silently dropped (no transforms; use dedicated icon variants).
   steppers, 5-moon quality, one entry per wake date, weekly avg + history).
 - **Overview tab**: ALL REAL DATA — time-based greeting, streak (meal logged
   or workout finished; empty today doesn't break chain; flame lights orange
-  once today has an entry), stat cards (calories+protein today, Steps = "—
-  Connect Apple Health" placeholder, water vs goal, last sleep), Recent
-  Activity (4 latest real events: workouts/foods/sleep).
+  once today has an entry), stat cards (calories+protein today, Steps = REAL
+  via expo-sensors Pedometer [phone motion chip, works in Expo Go; chosen over
+  HealthKit which needs an EAS dev build + $99/yr Apple Developer on Windows],
+  water vs goal, last sleep), Recent Activity (4 latest real events).
 - **Profile tab**: real stats, dark mode, rest timer default, water goal +
   cup size, **Coach Profile** (goal: muscle/strength/fatloss/health; diet:
   animal/keto/omnivore/plant; body weight lb stepper (0=unset); workouts/week).
@@ -117,16 +128,41 @@ Provider-agnostic: UI only calls `generateSuggestions(settings, ctx, briefing)`
 - Suggestions cached in `coachCache` with provider + timestamp; regenerate is
   manual (Refresh) to conserve API credits.
 
+## Meal Planner (v1 shipped this session — user's redefined vision)
+NOT "save & reuse presets". It plans the user's eating FOR them: pantry +
+user-defined day template → concrete meals with real amounts, day/week/month
+ahead, with natural diversity ("user never has to think about what to eat").
+Example driving the design: trains mornings, Randle-cycle-conscious →
+carb+lean breakfast, fatty dinner.
+- `lib/mealPlanner.ts` — pure/deterministic (seeded; regenerate = new seed):
+  priorities (1) calories ±3% [user: tight] (2) slot archetypes
+  ('carb-lean'|'fatty'|'high-protein'|'balanced') (3) maximize micronutrients
+  — foods picked by marginal %RDA-per-kcal, capped at 100% (diminishing
+  returns = in-day variety; sodium/chloride/fiber excluded — steering by
+  omission, same philosophy as coach rules) (4) cross-day rotation penalties
+  (5) optional P/C/F % targets, soft ±7pp [user: wide margin ok].
+  Guards: ≥25 kcal/serving to be a component, ≤4 servings/item, no repeat
+  food within a day, quarter-serving amounts, calorie true-up pass.
+  Tested vs seed data: 7 days all ±1.2%, 97-100% micro coverage, 56 unique
+  foods, archetype shapes correct.
+- `MealPlannerPage.tsx` (MealPresets route; Diet tile renamed "Meal Planner"):
+  Day Template card (calorie target REQUIRED [not asked elsewhere], optional
+  macro %, slots: name + meal-cycle chip + archetype chips, ≤6 slots),
+  Day/Week(7)/Month(28) horizon, Generate/Regenerate, per-day collapsible
+  cards, "Log to <meal>" writes real-servings LogEntries to that plan date.
+- Persisted: `plannerSettings`, `mealPlan` keys. AI layer: NOT built yet —
+  planned as optional refine layer reusing coach providers ("maybe AI if not
+  too demanding" — rules core was the agreed architecture).
+
 ## Roadmap / next steps (user-agreed order)
-1. **Apple Health steps** — requires EAS dev build + react-native-health
-   (NOT possible in Expo Go). User understands hot reload still works with a
-   dev build. Steps card on Overview is the waiting placeholder.
-2. Rules engine deepening (micronutrient flags from the 42-nutrient data was
+1. Rules engine deepening (micronutrient flags from the 42-nutrient data was
    explicitly deferred as "later"; stall detection needs richer trend data).
-3. Meal Presets screen (BlankPage placeholder exists in DietStack).
-4. Diet Recommendations screen (BlankPage placeholder).
-5. Fonts: 'Barlow Condensed'/'DM Sans' are referenced but never loaded via
+2. Optional AI refine layer on the Meal Planner (reuse coach providers).
+3. Diet Recommendations screen (BlankPage placeholder).
+4. Fonts: 'Barlow Condensed'/'DM Sans' are referenced but never loaded via
    expo-font — falls back to system fonts. Load them eventually.
+5. Full Apple Health/HealthKit (Watch data) — OPTIONAL upgrade now; Pedometer
+   covers steps. Needs EAS dev build + $99/yr Apple Developer (no Mac).
 6. Accounts/sync — LAST, only when multi-device or community voting goes real.
 
 ## Working conventions for agents
@@ -137,8 +173,13 @@ Provider-agnostic: UI only calls `generateSuggestions(settings, ctx, briefing)`
   concern; keep diffs surgical.
 - The folder previously lived in OneDrive, which twice ROLLED BACK App.js and
   other files mid-session (sync conflicts silently restoring old versions).
-  The user is moving the folder now partly because of this. If anything looks
-  mysteriously reverted, suspect sync tooling first. **Recommend git init on
-  first session in the new location.**
+  If anything looks mysteriously reverted, suspect sync tooling first.
+  **Git is now initialized** (branch main, first commit 2026-07-26). NOTE for
+  cloud/bridge agents: the mounted folder forbids unlink, so every git command
+  leaves a stale `.git/*.lock` — `mv` it into `_to_delete/` (gitignored)
+  before/after git commands; never end a git sequence without the cleanup.
+  The user can empty `_to_delete/` anytime.
+- After `package.json` changes the user must run `npm install` (expo-sensors
+  was added for steps).
 - Storage migrations: bump key versions + add self-heal effects in App.js
   (see foods self-heal and legacy plan→days migration for the pattern).
