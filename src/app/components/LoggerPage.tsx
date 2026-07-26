@@ -13,6 +13,10 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Droplets, Plus, X } 
 import { MEALS } from '../lib/constants';
 import type { Food, LogEntry, MealName } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
+import NumericInput from './components2/NumericInput';
+
+// Show servings without float noise: 1.928 → "1.93", 2 → "2".
+const fmtServings = (s: number) => String(Math.round(s * 100) / 100);
 
 interface LoggerPageProps {
   foods: Food[];
@@ -85,6 +89,22 @@ export default function LoggerPage({
       date,
       i + 1 === filledCups ? i * waterCupOz : (i + 1) * waterCupOz
     );
+
+  // Inline servings editing: tap the number, type any amount (6.8, 0.25…).
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editServings, setEditServings] = useState('');
+  const startEditServings = (entry: LogEntry) => {
+    setEditingEntryId(entry.id);
+    setEditServings(fmtServings(entry.servings));
+  };
+  const commitEditServings = (entry: LogEntry) => {
+    setEditingEntryId(null);
+    const val = parseFloat(editServings);
+    // Blank/garbage input keeps the old value; 0 removes the entry
+    // (matches stepping down to zero).
+    if (!isFinite(val) || val < 0) return;
+    onUpdateServings(entry.id, Math.round(val * 1000) / 1000);
+  };
 
   // Free-form oz entry for amounts that don't line up with cup size.
   const [customOz, setCustomOz] = useState('');
@@ -282,24 +302,49 @@ export default function LoggerPage({
                     >
                       <Text style={styles.entryName}>{food.name}</Text>
                       <Text style={styles.entryMeta}>
-                        {entry.servings} × {food.servingLabel} ·{' '}
+                        {fmtServings(entry.servings)} × {food.servingLabel} ·{' '}
                         {Math.round(cals)} kcal
                       </Text>
                     </Pressable>
                     <View style={styles.entryActions}>
                       <Pressable
                         onPress={() =>
-                          onUpdateServings(entry.id, entry.servings - 0.5)
+                          onUpdateServings(
+                            entry.id,
+                            Math.round((entry.servings - 0.5) * 1000) / 1000
+                          )
                         }
                         style={styles.stepperBtn}
                         hitSlop={4}
                       >
                         <Text style={styles.stepperText}>−</Text>
                       </Pressable>
-                      <Text style={styles.servings}>{entry.servings}</Text>
+                      {editingEntryId === entry.id ? (
+                        <NumericInput
+                          value={editServings}
+                          onChangeText={setEditServings}
+                          autoFocus
+                          selectTextOnFocus
+                          onBlur={() => commitEditServings(entry)}
+                          onSubmitEditing={() => commitEditServings(entry)}
+                          style={styles.servingsInput}
+                        />
+                      ) : (
+                        <Pressable
+                          onPress={() => startEditServings(entry)}
+                          hitSlop={4}
+                        >
+                          <Text style={styles.servings}>
+                            {fmtServings(entry.servings)}
+                          </Text>
+                        </Pressable>
+                      )}
                       <Pressable
                         onPress={() =>
-                          onUpdateServings(entry.id, entry.servings + 0.5)
+                          onUpdateServings(
+                            entry.id,
+                            Math.round((entry.servings + 0.5) * 1000) / 1000
+                          )
                         }
                         style={styles.stepperBtn}
                         hitSlop={4}
@@ -605,6 +650,20 @@ const createStyles = (c: ThemeColors) =>
     fontFamily: 'Barlow Condensed',
     minWidth: 24,
     textAlign: 'center',
+  },
+  servingsInput: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: c.text,
+    fontFamily: 'Barlow Condensed',
+    minWidth: 44,
+    textAlign: 'center',
+    borderRadius: 8,
+    backgroundColor: c.surface,
+    borderWidth: 2,
+    borderColor: c.text,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   removeBtn: {
     width: 24,
