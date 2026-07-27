@@ -44,10 +44,13 @@ const TILES: {
     tint: 'tintOrange',
   },
   {
-    id: 'DietRecs',
-    label: 'Diet Recs',
+    // Replaced the old "Diet Recs" placeholder — the AI Coach already
+    // owns recommendations, and two competing advice surfaces is worse
+    // than one good one.
+    id: 'Recipes',
+    label: 'Recipes',
     Icon: Sparkles,
-    desc: 'Personalised suggestions',
+    desc: 'Build dishes from your foods',
     tint: 'tintPurple',
   },
 ];

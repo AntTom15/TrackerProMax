@@ -247,6 +247,39 @@ carb+lean breakfast, fatty dinner.
    covers steps. Needs EAS dev build + $99/yr Apple Developer (no Mac).
 6. Accounts/sync — LAST, only when multi-device or community voting goes real.
 
+## Recipes ("super items", shipped 2026-07-26)
+A recipe is a named ingredient set that behaves like ONE food everywhere.
+- **Ingredients are the only source of truth — nutrients are NEVER
+  stored.** `lib/recipes.ts` projects a Recipe into the Food shape on
+  every read (`recipeToFood`), and `useAppStore` appends those to the
+  `foods` array via a memo. That single memo is why the logger, pantry,
+  planner, nutrition summaries and gram display all work untouched, and
+  why nothing can go stale when an ingredient or seed food changes.
+  Store exposes `foods` (combined) and `rawFoods` (editable DB).
+- Per serving = totals ÷ `yields`. `cookedWeightGrams` overrides the raw
+  ingredient sum (stews shed water); serving weight = total ÷ yields.
+- **Category defaults to the biggest CALORIE contributor**, not weight —
+  weight files a half-tomato chili under "Vegetables" and any broth-heavy
+  stew under "Broths & Infusions". Overridable per recipe.
+- `Food.isRecipe` + `Food.ingredientCategories` are the only markers.
+  **`passesRestriction()` checks ingredientCategories as well as the
+  recipe's own category** — otherwise a recipe categorised "Starches &
+  Tubers" smuggles butter through an Orthodox fast day. Verified by test.
+- Slots gain `recipeOnly`: one recipe fills the whole slot at full budget
+  (falls through to normal assembly if no recipe fits, so slots are never
+  empty). Recipes also compete as ordinary candidates when it's off.
+- Recipes get `MAX_GRAMS_PER_RECIPE` (1200g) instead of the 450g
+  per-ingredient cap, and are auto-added to the pantry on create (the
+  planner only draws from the pantry).
+- Recipe ids are `r…` prefixed. **No nesting** — recipes are derived from
+  `rawFoods` only, so a recipe can't contain a recipe (deferred: needs
+  cycle detection).
+- generatePlan now warns when any day misses the calorie target by >10%
+  (gram caps + low-density pantries can make it unreachable; silence read
+  as "this plan hits your target").
+- The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
+  Coach already owns recommendations and two advice surfaces compete.
+
 ## Keyboard handling (fixed 2026-07-26 — keyboard covered inputs)
 NO library: react-native-keyboard-controller needs a native build and
 would break Expo Go. Built-ins only.

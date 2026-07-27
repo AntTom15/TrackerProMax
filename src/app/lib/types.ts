@@ -60,6 +60,37 @@ export interface Food {
   uploadedBy: string;
   upvotes: number;
   downvotes: number;
+  // ---- Recipe-derived foods (see lib/recipes.ts) ----
+  // Recipes are stored separately and projected into this shape so every
+  // screen can treat them as ordinary foods. These two fields are the
+  // only way to tell the difference.
+  isRecipe?: boolean;
+  // Every category used by the recipe's ingredients. Restriction
+  // whitelists MUST check these as well as `category`, otherwise a
+  // recipe filed under "Vegetables" could smuggle butter into a fast day.
+  ingredientCategories?: string[];
+}
+
+// ---------------- Recipes ----------------
+
+export interface RecipeIngredient {
+  foodId: string;
+  // In units of that food's own serving, matching LogEntry.servings.
+  servings: number;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  ingredients: RecipeIngredient[];
+  // Portions the finished dish makes; nutrients are divided by this.
+  yields: number;
+  // Cooked weight of the WHOLE dish. Cooking drives off water, so the
+  // raw ingredient sum overstates it. null = fall back to that sum.
+  cookedWeightGrams?: number | null;
+  // null = auto-derive from the biggest calorie contributor.
+  categoryOverride?: string | null;
+  createdAt: number;
 }
 
 // The pantry is a list of food ids; per-category custom ordering lives in
@@ -96,6 +127,9 @@ export interface MealSlot {
   name: string;
   meal: MealName;
   archetype: SlotArchetype;
+  // When true this slot is filled by ONE recipe at full slot size,
+  // instead of assembling several foods — how a cooked dinner works.
+  recipeOnly?: boolean;
   // Optional composition: one food from EACH listed category (leftover
   // calories top up from the same categories). Empty/undefined = any.
   categories?: string[];

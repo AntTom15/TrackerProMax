@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { Home, Dumbbell, Utensils, User } from './src/app/components/Icons';
 import { usePersistedState, STORAGE_KEYS } from './src/app/lib/storage';
 import { DEFAULT_PLANNER_SETTINGS } from './src/app/lib/mealPlanner';
 import { LEGACY_DAIRY_EGGS, splitDairyEggs } from './src/app/lib/constants';
+import { recipesToFoods } from './src/app/lib/recipes';
 import { SEED_FOODS, SEED_PANTRY_IDS } from './src/app/lib/seedData';
 import { SEED_EXERCISES } from './src/app/lib/exerciseSeed';
 import { ThemeProvider, LIGHT, DARK, useThemeColors } from './src/app/lib/theme';
@@ -32,6 +33,7 @@ import LogFoodPickerPage from './src/app/components/LogFoodPickerPage';
 import MealPlannerPage from './src/app/components/MealPlannerPage';
 import MealPlanDetailPage from './src/app/components/MealPlanDetailPage';
 import MealPlanWeekSummaryPage from './src/app/components/MealPlanWeekSummaryPage';
+import RecipesPage from './src/app/components/RecipesPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -170,8 +172,17 @@ function DietStack({ store }) {
           <MealPlanWeekSummaryPage foods={foods} plan={store.mealPlan} />
         )}
       </Stack.Screen>
-      <Stack.Screen name="DietRecs" options={{ title: 'Diet Recommendations' }}>
-        {() => <BlankPage title="Diet Recommendations" />}
+      <Stack.Screen name="Recipes" options={{ title: 'Recipes' }}>
+        {() => (
+          <RecipesPage
+            foods={store.rawFoods}
+            pantryIds={pantryIds}
+            recipes={store.recipes}
+            onAddRecipe={store.addRecipe}
+            onUpdateRecipe={store.updateRecipe}
+            onDeleteRecipe={store.deleteRecipe}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -324,6 +335,48 @@ function useAppStore() {
   );
   const [myVotes, setMyVotes] = usePersistedState(STORAGE_KEYS.votes, {});
   const [log, setLog] = usePersistedState(STORAGE_KEYS.log, []);
+
+  // ---- Recipes ----
+  // Stored as ingredients only. Everything downstream consumes `foods`,
+  // so each recipe is projected into the Food shape here and appended —
+  // that single memo is what makes recipes work in the logger, pantry,
+  // planner and nutrition summaries without touching those screens.
+  const [recipes, setRecipes] = usePersistedState(STORAGE_KEYS.recipes, []);
+
+  // Built from BASE foods on purpose: a recipe can't be an ingredient of
+  // another recipe, which keeps the projection non-recursive (nesting was
+  // deliberately deferred — it needs cycle detection).
+  const allFoods = useMemo(() => {
+    const foodById = new Map(foods.map((f) => [f.id, f]));
+    return [...foods, ...recipesToFoods(recipes, foodById)];
+  }, [foods, recipes]);
+
+  // draft: { name, ingredients, yields, cookedWeightGrams, categoryOverride }
+  const addRecipe = (draft) => {
+    const recipe = {
+      ...draft,
+      id: `r${Date.now()}`,
+      createdAt: Date.now(),
+    };
+    setRecipes((prev) => [...prev, recipe]);
+    // A recipe you wrote is something you can make, so stock it — the
+    // planner only ever draws from the pantry.
+    setPantryIds((prev) =>
+      prev.includes(recipe.id) ? prev : [...prev, recipe.id]
+    );
+    return recipe;
+  };
+
+  const updateRecipe = (recipeId, patch) => {
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, ...patch } : r))
+    );
+  };
+
+  const deleteRecipe = (recipeId) => {
+    setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+    setPantryIds((prev) => prev.filter((id) => id !== recipeId));
+  };
 
   const addToPantry = (foodId) => {
     setPantryIds((prev) => (prev.includes(foodId) ? prev : [...prev, foodId]));
@@ -632,7 +685,14 @@ function useAppStore() {
   );
 
   return {
-    foods,
+    // Recipe-derived foods included — screens treat them as ordinary
+    // foods. `rawFoods` is the editable database behind them.
+    foods: allFoods,
+    rawFoods: foods,
+    recipes,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
     pantryIds,
     pantryOrder,
     myVotes,

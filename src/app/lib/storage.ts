@@ -26,6 +26,8 @@ export const STORAGE_KEYS = {
   // Meal planner: day template + last generated plan
   plannerSettings: `${PREFIX}plannerSettings`,
   mealPlan: `${PREFIX}mealPlan`,
+  // Recipes: ingredients only — nutrients are always derived
+  recipes: `${PREFIX}recipes`,
   // AI Coach: provider settings + cached suggestions
   coachProvider: `${PREFIX}coachProvider`,
   coachClaudeKey: `${PREFIX}coachClaudeKey`,

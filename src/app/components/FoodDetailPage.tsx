@@ -109,7 +109,16 @@ export default function FoodDetailPage({
 
       <Text style={styles.servingLine}>
         Per serving — {food.servingLabel}
+        {food.isRecipe ? ' · recipe' : ''}
       </Text>
+
+      {/* Recipes list what they're made of, so the derived numbers
+          above are inspectable rather than magic. */}
+      {food.isRecipe && !!food.ingredientCategories?.length && (
+        <Text style={styles.recipeIngredients}>
+          Made from: {food.ingredientCategories.join(' · ')}
+        </Text>
+      )}
 
       {/* Full nutrient profile */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -251,6 +260,14 @@ const createStyles = (c: ThemeColors) =>
       color: c.textMuted,
       fontFamily: 'DM Sans',
       paddingHorizontal: 20,
+      marginBottom: 10,
+    },
+    recipeIngredients: {
+      fontSize: 11,
+      color: c.accentDeep,
+      fontFamily: 'DM Sans',
+      paddingHorizontal: 20,
+      marginTop: -4,
       marginBottom: 10,
     },
     content: {

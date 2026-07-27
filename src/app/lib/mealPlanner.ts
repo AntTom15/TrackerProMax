@@ -242,16 +242,30 @@ const round25 = (x: number) => Math.max(0.25, Math.round(x * 4) / 4);
 const MIN_CAL_PER_SERVING = 25;
 const MAX_SERVINGS = 4;
 const MAX_GRAMS_PER_ITEM = 450;
+// A recipe serving IS a full portion of a dish, so the single-ingredient
+// cap would clip any normal bowl of stew. Recipes get a plate-sized one.
+const MAX_GRAMS_PER_RECIPE = 1200;
 
 const maxServingsFor = (food: Food): number => {
   const g = food.servingWeightGrams;
   if (g && g > 0) {
+    const cap = food.isRecipe ? MAX_GRAMS_PER_RECIPE : MAX_GRAMS_PER_ITEM;
     return Math.max(
       0.25,
-      Math.min(MAX_SERVINGS, Math.floor((MAX_GRAMS_PER_ITEM / g) * 4) / 4)
+      Math.min(MAX_SERVINGS, Math.floor((cap / g) * 4) / 4)
     );
   }
   return MAX_SERVINGS;
+};
+
+// A food passes a restriction whitelist only if its own category AND
+// every one of its ingredient categories are allowed. Without the second
+// half, a recipe filed under "Vegetables" could carry butter straight
+// through a vegan fast day.
+const passesRestriction = (food: Food, allowed: Set<string>): boolean => {
+  if (!allowed.has(food.category)) return false;
+  const ing = food.ingredientCategories;
+  return !ing || ing.every((cat) => allowed.has(cat));
 };
 
 // Soft macro steering: how far the day's macro fractions sit outside a
@@ -297,6 +311,48 @@ const buildMeal = (
   const items: PlannedItem[] = [];
   const usedHere = new Set<string>();
   let remaining = budget;
+
+  // Whole-slot recipe mode: one recipe IS the meal, sized to the slot's
+  // whole calorie budget. Falls through to normal assembly if the pantry
+  // has no suitable recipe, so the slot never comes back empty.
+  if (slot.recipeOnly) {
+    let best: { cand: Candidate; servings: number; score: number } | null =
+      null;
+    for (const cand of candidates) {
+      if (!cand.food.isRecipe) continue;
+      if (cand.shape.cal < MIN_CAL_PER_SERVING) continue;
+      const servings = Math.min(
+        round25(budget / cand.shape.cal),
+        maxServingsFor(cand.food)
+      );
+      const cals = servings * cand.shape.cal;
+      const gain = microGain(dayTotals, weekPrev, pace, cand.food, servings);
+      let score = (gain / Math.max(cals, 50)) * 1000;
+      score *= archetypeFit(cand.shape, slot.archetype) || 0.3;
+      // How close it lands to the slot's budget matters more here than
+      // usual — there's nothing else in the meal to make up a shortfall.
+      score *= 1 / (1 + Math.abs(cals - budget) / Math.max(budget, 1));
+      const recent = recentUse.get(cand.food.id) ?? 0;
+      const inPlan = planUse.get(cand.food.id) ?? 0;
+      score *= Math.pow(0.55, recent) * Math.pow(0.7, inPlan);
+      if (dayUsed.has(cand.food.id)) score *= 0.1;
+      if (!cand.inPantry) score *= RECOMMENDATION_HANDICAP;
+      score *= 0.85 + rng() * 0.3;
+      if (!best || score > best.score) best = { cand, servings, score };
+    }
+    if (best) {
+      dayUsed.add(best.cand.food.id);
+      addToTotals(dayTotals, best.cand.food, best.servings);
+      return [
+        {
+          foodId: best.cand.food.id,
+          servings: best.servings,
+          ...(best.cand.inPantry ? {} : { recommended: true }),
+        },
+      ];
+    }
+  }
+
   const compositional = slotCategories.length > 0;
   const catSet = new Set(slotCategories);
   // Free mode: 2–4 foods by budget. Compositional: one per category
@@ -546,7 +602,7 @@ export function generatePlan(
     const usableCount = candidates.filter(
       (cd) =>
         cd.inPantry &&
-        allowed.has(cd.food.category) &&
+        passesRestriction(cd.food, allowed) &&
         cd.shape.cal >= MIN_CAL_PER_SERVING
     ).length;
     if (usableCount < 6) {
@@ -597,7 +653,7 @@ export function generatePlan(
       restrictionName = rules.map((r) => r.name).join(' + ');
     }
     const dayCandidates = allowed
-      ? candidates.filter((cd) => allowed!.has(cd.food.category))
+      ? candidates.filter((cd) => passesRestriction(cd.food, allowed!))
       : candidates;
 
     const dayUsed = new Set<string>();
@@ -646,6 +702,30 @@ export function generatePlan(
       }
     prevPrevDayFoods = prevDayFoods;
     prevDayFoods = todayFoods;
+  }
+
+  // Calorie shortfalls are possible even after the true-up pass: every
+  // item has a gram cap, so a pantry of low-density foods (juices, leafy
+  // veg) or a whole-slot recipe that can't fill its budget will land
+  // under target. Silence there would read as "this plan hits 2400".
+  const offTarget = days.filter(
+    (day) =>
+      Math.abs(
+        dayTotals(day, foodById).calories - settings.calorieTarget
+      ) >
+      settings.calorieTarget * 0.1
+  );
+  if (offTarget.length > 0) {
+    const worst = offTarget.reduce((a, b) =>
+      Math.abs(dayTotals(a, foodById).calories - settings.calorieTarget) >
+      Math.abs(dayTotals(b, foodById).calories - settings.calorieTarget)
+        ? a
+        : b
+    );
+    const worstCal = Math.round(dayTotals(worst, foodById).calories);
+    warnings.push(
+      `${offTarget.length} day${offTarget.length === 1 ? '' : 's'} missed the calorie target by more than 10% (worst: ${worstCal} vs ${settings.calorieTarget}). Stock more calorie-dense foods, or lower the target.`
+    );
   }
 
   const emptyMeals = days.some((day) => day.meals.some((m) => m.items.length === 0));

@@ -489,20 +489,48 @@ export default function MealPlannerPage({
                     </Pressable>
                   ))}
                 </View>
-                {/* Composition: which food categories build this meal */}
+                {/* One recipe as the whole meal (how a cooked dinner works) */}
                 <Pressable
                   onPress={() =>
-                    setPickerTarget({ kind: 'slot', id: slot.id })
+                    updateSlot(slot.id, { recipeOnly: !slot.recipeOnly })
                   }
-                  style={styles.categoriesRow}
+                  style={[
+                    styles.recipeOnlyRow,
+                    slot.recipeOnly && styles.recipeOnlyRowActive,
+                  ]}
                   hitSlop={4}
                 >
-                  <Text style={styles.categoriesLabel}>Foods</Text>
-                  <Text style={styles.categoriesValue} numberOfLines={1}>
-                    {categorySummary(slot.categories, 'Any — engine picks')}
+                  <Sparkles
+                    size={12}
+                    color={slot.recipeOnly ? c.onAccent : c.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.recipeOnlyText,
+                      slot.recipeOnly && styles.recipeOnlyTextActive,
+                    ]}
+                  >
+                    One recipe fills this meal
                   </Text>
-                  <ChevronDown size={14} color={c.textMuted} />
                 </Pressable>
+
+                {/* Composition: which food categories build this meal.
+                    Irrelevant when a single recipe is the whole meal. */}
+                {!slot.recipeOnly && (
+                  <Pressable
+                    onPress={() =>
+                      setPickerTarget({ kind: 'slot', id: slot.id })
+                    }
+                    style={styles.categoriesRow}
+                    hitSlop={4}
+                  >
+                    <Text style={styles.categoriesLabel}>Foods</Text>
+                    <Text style={styles.categoriesValue} numberOfLines={1}>
+                      {categorySummary(slot.categories, 'Any — engine picks')}
+                    </Text>
+                    <ChevronDown size={14} color={c.textMuted} />
+                  </Pressable>
+                )}
               </View>
             ))}
 
@@ -1126,6 +1154,33 @@ const createStyles = (c: ThemeColors) =>
       fontWeight: '700',
       color: c.textMuted,
       fontFamily: 'Barlow Condensed',
+    },
+    recipeOnlyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 8,
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.border,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    recipeOnlyRowActive: {
+      backgroundColor: c.accent,
+      borderColor: c.text,
+    },
+    recipeOnlyText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    recipeOnlyTextActive: {
+      color: c.onAccent,
     },
     categoriesRow: {
       flexDirection: 'row',
