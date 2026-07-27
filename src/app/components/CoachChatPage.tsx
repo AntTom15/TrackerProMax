@@ -28,6 +28,7 @@ import type {
   Food,
   LogEntry,
   SleepEntry,
+  WorkoutPlan,
   WorkoutSession,
 } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
@@ -41,6 +42,9 @@ interface CoachChatPageProps {
     sleep: SleepEntry[];
     water: Record<string, number>;
     waterGoalOz: number;
+    plans: WorkoutPlan[];
+    pantryIds: string[];
+    steps: Record<string, number>;
     coachProvider: CoachProviderId;
     coachClaudeKey: string;
     coachClaudeModel: string;
@@ -103,6 +107,9 @@ export default function CoachChatPage({ store }: CoachChatPageProps) {
       water: store.water,
       waterGoalOz: store.waterGoalOz,
       profile: store.coachProfile,
+      plans: store.plans,
+      pantryIds: store.pantryIds,
+      steps: store.steps,
     });
 
   const send = async () => {

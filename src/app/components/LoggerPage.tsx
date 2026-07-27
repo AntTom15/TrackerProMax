@@ -133,7 +133,15 @@ export default function LoggerPage({
         <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <ChevronLeft size={22} color={c.textMuted} />
         </Pressable>
-        <Text style={styles.title}>Logger</Text>
+        <Pressable
+          onPress={() =>
+            (navigation as any).navigate('LogPeriodSummary', { date })
+          }
+          style={styles.summaryBtn}
+          hitSlop={6}
+        >
+          <Text style={styles.summaryBtnText}>Week / Month</Text>
+        </Pressable>
         <View style={styles.dateNav}>
           <Pressable onPress={() => shiftDate(-1)} hitSlop={8}>
             <ChevronLeft size={18} color={c.textMuted} />
@@ -424,6 +432,24 @@ const createStyles = (c: ThemeColors) =>
     fontFamily: 'Barlow Condensed',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  // Replaces the static "Logger" title — the screen is already titled by
+  // context, and this is a better use of the space.
+  summaryBtn: {
+    borderRadius: 10,
+    backgroundColor: c.cardAlt,
+    borderWidth: 2,
+    borderColor: c.text,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  summaryBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: c.text,
+    fontFamily: 'Barlow Condensed',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   dateNav: {
     flexDirection: 'row',

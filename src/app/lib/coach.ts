@@ -3,9 +3,34 @@ import type {
   Exercise,
   Food,
   LogEntry,
+  NutrientKey,
+  Nutrients,
   SleepEntry,
+  WorkoutPlan,
   WorkoutSession,
 } from './types';
+import { NUTRIENT_SECTIONS } from './nutrients';
+
+// Micronutrients with a daily value, used for the coverage gap report.
+// Sodium/chloride are excluded (trivially over-consumed) and derived
+// rows are skipped — foods never carry those keys.
+const MICRO_TARGETS: { key: NutrientKey; label: string; rda: number }[] = (() => {
+  const wanted = new Set(['Vitamins', 'Major Minerals', 'Trace Minerals']);
+  const out: { key: NutrientKey; label: string; rda: number }[] = [];
+  for (const section of NUTRIENT_SECTIONS) {
+    if (!wanted.has(section.title)) continue;
+    for (const item of section.items) {
+      if (!item.rda || item.derive) continue;
+      if (item.key === 'sodium' || item.key === 'chloride') continue;
+      out.push({
+        key: item.key as NutrientKey,
+        label: item.label,
+        rda: item.rda,
+      });
+    }
+  }
+  return out;
+})();
 
 // ---------------------------------------------------------------------------
 // AI Coach scaffold.
@@ -81,9 +106,25 @@ export function buildCoachContext(input: {
   water: Record<string, number>;
   waterGoalOz: number;
   profile: CoachProfile;
+  // Optional so older call sites keep working; without them the coach
+  // simply can't answer plan/pantry questions.
+  plans?: WorkoutPlan[];
+  pantryIds?: string[];
+  steps?: Record<string, number>;
 }) {
-  const { foods, log, sessions, exercises, sleep, water, waterGoalOz, profile } =
-    input;
+  const {
+    foods,
+    log,
+    sessions,
+    exercises,
+    sleep,
+    water,
+    waterGoalOz,
+    profile,
+    plans = [],
+    pantryIds = [],
+    steps = {},
+  } = input;
   const foodById = new Map(foods.map((f) => [f.id, f]));
   const exById = new Map(exercises.map((e) => [e.id, e]));
   const dayKey = (d: Date) => format(d, 'yyyy-MM-dd');
@@ -188,11 +229,95 @@ export function buildCoachContext(input: {
   const trainProtein = dietDays.filter((d) => trainingDays.has(d));
   const restProtein = dietDays.filter((d) => !trainingDays.has(d));
 
+  // ---- Micronutrient coverage (last 7 logged days) ----
+  // The whole point of the 42-nutrient database — without this the coach
+  // can only ever talk about calories and protein, and "what should I
+  // add to my pantry?" has no grounding.
+  const microTotals: Nutrients = {};
+  log.forEach((e) => {
+    if (!last7.has(e.date)) return;
+    const n = foodById.get(e.foodId)?.nutrients;
+    if (!n) return;
+    for (const { key } of MICRO_TARGETS) {
+      const v = n[key];
+      if (typeof v === 'number') {
+        microTotals[key] = (microTotals[key] ?? 0) + v * e.servings;
+      }
+    }
+  });
+
   // ---- Water & sleep (last 7 days) ----
   const waterVals = [...last7]
     .map((d) => water[d] ?? 0)
     .filter((v) => v > 0);
   const recentSleep = sleep.filter((e) => last7.has(e.date));
+
+  // Coverage is averaged over days actually logged — dividing by 7 when
+  // only 2 days were tracked would invent a deficiency.
+  const microDivisor = Math.max(1, dietDays.length);
+  const micronutrientCoverage = MICRO_TARGETS.map(({ key, label, rda }) => ({
+    nutrient: label,
+    pctOfDailyTarget: Math.round(
+      ((microTotals[key] ?? 0) / microDivisor / rda) * 100
+    ),
+  })).sort((a, b) => a.pctOfDailyTarget - b.pctOfDailyTarget);
+
+  const stepDays = [...last7].filter((d) => (steps[d] ?? 0) > 0);
+
+  // ---- Pantry ----
+  const pantrySet = new Set(pantryIds);
+  const pantryFoods = foods.filter((f) => pantrySet.has(f.id));
+  const pantryByCategory: Record<string, string[]> = {};
+  for (const f of pantryFoods) {
+    (pantryByCategory[f.category] ??= []).push(f.name);
+  }
+  const pantrySummary = {
+    itemCount: pantryFoods.length,
+    // Names matter for "what should I add" — but a huge pantry would
+    // dominate the packet, so long categories are truncated.
+    byCategory: Object.fromEntries(
+      Object.entries(pantryByCategory).map(([cat, names]) => [
+        cat,
+        names.length > 12
+          ? [...names.slice(0, 12), `+${names.length - 12} more`]
+          : names,
+      ])
+    ),
+    recipes: pantryFoods
+      .filter((f) => f.isRecipe)
+      .map((f) => ({
+        name: f.name,
+        kcalPerServing: Math.round(f.nutrients?.calories ?? 0),
+      })),
+  };
+
+  // ---- Saved workout plans ----
+  const planSummaries = plans.slice(0, 6).map((p) => {
+    const setsByMuscle: Record<string, number> = {};
+    let totalSets = 0;
+    (p.days ?? []).forEach((d) => {
+      (d.exercises ?? []).forEach((pe) => {
+        const ex = exById.get(pe.exerciseId);
+        if (!ex) return;
+        const muscle = ex.muscles?.[0] ?? 'Other';
+        setsByMuscle[muscle] = (setsByMuscle[muscle] ?? 0) + pe.targetSets;
+        totalSets += pe.targetSets;
+      });
+    });
+    return {
+      name: p.name,
+      dayCount: (p.days ?? []).length,
+      totalWeeklySets: totalSets,
+      setsByMuscle,
+      days: (p.days ?? []).map((d) => ({
+        name: d.name,
+        exercises: (d.exercises ?? []).map((pe) => {
+          const ex = exById.get(pe.exerciseId);
+          return `${ex?.name ?? 'Unknown'} ${pe.targetSets}x${pe.targetReps}`;
+        }),
+      })),
+    };
+  });
 
   return {
     generatedFor: dayKey(today),
@@ -233,7 +358,32 @@ export function buildCoachContext(input: {
                 10
             ) / 10
           : 0,
+      // Per-night detail so trends (a bad run of nights, weekend catch-up)
+      // are visible rather than flattened into one average.
+      recentNights: recentSleep
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 7)
+        .map((e) => ({
+          date: e.date,
+          hours: Math.round((e.durationMin / 60) * 10) / 10,
+          quality: e.quality,
+        })),
     },
+    steps: {
+      daysTrackedLast7d: stepDays.length,
+      avgPerDay: avg(stepDays.map((d) => steps[d] ?? 0)),
+    },
+    // % of the daily value actually hit, averaged over the days logged.
+    // Lowest first — this is the list to reason from when recommending
+    // foods to add.
+    micronutrientsLast7d: micronutrientCoverage,
+    // What the user actually owns, so suggestions can be "use the liver
+    // you already have" or "you have nothing rich in X".
+    pantry: pantrySummary,
+    // Saved workout plans, with set counts per muscle so plans can be
+    // compared against the user's goal rather than just listed.
+    plans: planSummaries,
   };
 }
 
@@ -243,7 +393,7 @@ export type CoachContext = ReturnType<typeof buildCoachContext>;
 // Prompt + response parsing (shared by all LLM providers)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are the AI coach inside a personal fitness tracker. You receive a JSON summary of the user's recent workouts, diet, water, and sleep.
+const SYSTEM_PROMPT = `You are the AI coach inside a personal fitness tracker. You receive a JSON summary of the user's recent workouts, diet, micronutrient coverage, water, sleep, steps, pantry contents and saved workout plans.
 
 Reply with ONLY a JSON array of 3 to 5 suggestion objects, no prose, no markdown fences:
 [{"tag": "...", "title": "...", "body": "...", "tint": "..."}]
@@ -255,6 +405,7 @@ Rules:
 - tint: exactly one of tintBlue, tintPurple, tintOrange, tintLime, tintCyan (vary them).
 - If a data area is empty (e.g. no sleep logs), at most one suggestion may encourage logging it; focus on areas with data.
 - Tailor advice to profile.goal and profile.dietStyle. Never suggest foods that conflict with the diet style, and don't flag intentionally low carbs or fiber on keto or animal-based diets.
+- micronutrientsLast7d is sorted lowest-first and is the strongest signal for diet suggestions: name the specific nutrient and a food that fixes it. Prefer foods already in pantry.byCategory; only suggest buying something when nothing stocked covers the gap.
 - Be concrete and actionable, never generic filler.`;
 
 function extractSuggestions(text: string): CoachSuggestion[] {
@@ -709,7 +860,9 @@ export interface CoachChatMessage {
   ts: number;
 }
 
-const CHAT_SYSTEM = `You are the user's AI fitness coach inside their personal tracker app. You have their briefing (their stated philosophy and standing instructions) and a JSON snapshot of their recent training, diet, water, and sleep data.
+const CHAT_SYSTEM = `You are the user's AI fitness coach inside their personal tracker app. You have their briefing (their stated philosophy and standing instructions) and a JSON snapshot of their recent training, diet, micronutrient coverage, water, sleep and steps, plus the contents of their pantry and their saved workout plans.
+
+The snapshot is real data about this specific user — use it. You can compare their saved plans (plans[], including setsByMuscle and the exercise list for each day) against their stated goal, and you can reason about what to add to their pantry from micronutrientsLast7d (sorted lowest-first) combined with pantry.byCategory. If they ask something the snapshot genuinely doesn't cover, say so plainly rather than guessing.
 
 How to behave:
 - Be conversational and specific — cite their actual numbers when relevant.

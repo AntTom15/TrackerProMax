@@ -26,6 +26,7 @@ import type {
   Food,
   LogEntry,
   SleepEntry,
+  WorkoutPlan,
   WorkoutSession,
 } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
@@ -48,6 +49,9 @@ interface AICoachPageProps {
     sleep: SleepEntry[];
     water: Record<string, number>;
     waterGoalOz: number;
+    plans: WorkoutPlan[];
+    pantryIds: string[];
+    steps: Record<string, number>;
     coachProvider: CoachProviderId;
     setCoachProvider: (p: CoachProviderId) => void;
     coachClaudeKey: string;
@@ -104,6 +108,9 @@ export default function AICoachPage({ store }: AICoachPageProps) {
         water: store.water,
         waterGoalOz: store.waterGoalOz,
         profile: store.coachProfile,
+        plans: store.plans,
+        pantryIds: store.pantryIds,
+        steps: store.steps,
       });
       const suggestions = await generateSuggestions(
         settings,

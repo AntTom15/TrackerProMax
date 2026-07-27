@@ -165,7 +165,26 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       onPress: () => goTo('ExerciseTab', 'Rest'),
     });
   });
-  const activities = events.sort((a, b) => b.ts - a.ts).slice(0, 4);
+  // Straight "newest 4" buried sleep and workouts: log four foods and
+  // they take every slot, because a night's sleep is anchored to 8 AM
+  // and always loses to anything eaten since. So guarantee the newest
+  // entry from each source a place, then fill the rest by recency.
+  const bySource = new Map<string, (typeof events)[number]>();
+  for (const e of events) {
+    const source =
+      e.tag === 'Exercise' ? 'workout' : e.tag === 'Rest' ? 'sleep' : 'food';
+    const held = bySource.get(source);
+    if (!held || e.ts > held.ts) bySource.set(source, e);
+  }
+  const guaranteed = [...bySource.values()];
+  const guaranteedSet = new Set(guaranteed);
+  // Fill the remaining slots only — slicing the combined list would
+  // just drop the guaranteed entries again.
+  const filler = events
+    .filter((e) => !guaranteedSet.has(e))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, Math.max(0, 5 - guaranteed.length));
+  const activities = [...guaranteed, ...filler].sort((a, b) => b.ts - a.ts);
 
   const STAT_CARDS = [
     {

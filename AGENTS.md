@@ -280,6 +280,35 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
 - The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
   Coach already owns recommendations and two advice surfaces compete.
 
+## Coach context expansion + logged summaries (2026-07-26)
+- `buildCoachContext` previously exposed ONLY calories+protein averages,
+  no plans and no pantry — so "which plan is better?" and "what should I
+  add to my pantry?" were unanswerable. Now also includes:
+  `micronutrientsLast7d` (every micro's % of daily target, **sorted
+  lowest-first**, averaged over days actually logged — dividing by 7 when
+  2 days were tracked would invent deficiencies), `pantry` (counts +
+  names by category, categories >12 items truncated, plus recipes),
+  `plans` (name, dayCount, totalWeeklySets, **setsByMuscle**, and each
+  day's exercise list as "Name 4x8"), `steps`, and `sleep.recentNights`
+  (per-night detail, not just the average).
+  New inputs are OPTIONAL (`plans`, `pantryIds`, `steps`) so old call
+  sites still compile. Both SYSTEM_PROMPT and CHAT_SYSTEM were updated to
+  tell the model to use them. Packet measured ~2.6KB / ~650 tokens with a
+  6-item pantry — keep an eye on it as the pantry grows (that's why the
+  per-category name list is capped).
+- `LogPeriodSummaryPage` ('LogPeriodSummary' route, opened from the
+  Logger header): the meal-planner week summary but sourced from the
+  actual log. Week/Month toggle + paging back through periods, macro
+  cards, biggest calorie contributors, full nutrient bars.
+  **Targets scale by days LOGGED, not days elapsed** — same reasoning as
+  the coach's micro coverage.
+- Overview Recent Activity: sleep and workouts were being crowded out —
+  sleep anchors to 8 AM of its wake date, so four foods logged that day
+  took every slot. Now the newest entry from each source (food/workout/
+  sleep) is guaranteed a place, then remaining slots fill by recency
+  (5 total). Note the guarantee must fill only the LEFTOVER slots; slicing
+  the combined list would just drop them again.
+
 ## Pantry category rail + profile photo (2026-07-26)
 - Pantry section headings went 10pt → 22pt/800 with a 3px rule and an
   item-count badge; a jump rail sits in a right-hand gutter (one tick per
