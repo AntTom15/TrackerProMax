@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +10,13 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, Dumbbell, Utensils, User } from './src/app/components/Icons';
+import {
+  Home,
+  Dumbbell,
+  Utensils,
+  User,
+  Sparkles,
+} from './src/app/components/Icons';
 
 import { usePersistedState, STORAGE_KEYS } from './src/app/lib/storage';
 import { DEFAULT_PLANNER_SETTINGS } from './src/app/lib/mealPlanner';
@@ -35,6 +42,7 @@ import MealPlanDetailPage from './src/app/components/MealPlanDetailPage';
 import MealPlanWeekSummaryPage from './src/app/components/MealPlanWeekSummaryPage';
 import RecipesPage from './src/app/components/RecipesPage';
 import LogPeriodSummaryPage from './src/app/components/LogPeriodSummaryPage';
+import ProgressPage from './src/app/components/ProgressPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -245,19 +253,8 @@ function ExerciseStack({ store }) {
           />
         )}
       </Stack.Screen>
-      <Stack.Screen name="AICoach" options={{ title: 'AI Coach' }}>
-        {() => <AICoachPage store={store} />}
-      </Stack.Screen>
-      <Stack.Screen name="CoachChat" options={{ title: 'Coach Chat' }}>
-        {() => <CoachChatPage store={store} />}
-      </Stack.Screen>
-      <Stack.Screen name="CoachBriefing" options={{ title: 'Coach Briefing' }}>
-        {() => (
-          <CoachBriefingPage
-            briefing={store.coachBriefing}
-            onChange={store.setCoachBriefing}
-          />
-        )}
+      <Stack.Screen name="Progress" options={{ title: 'Progress' }}>
+        {() => <ProgressPage exercises={exercises} sessions={sessions} />}
       </Stack.Screen>
       <Stack.Screen name="Rest" options={{ title: 'Rest' }}>
         {() => (
@@ -279,6 +276,32 @@ function ExerciseStack({ store }) {
       >
         {() => (
           <ExerciseHistoryPage exercises={exercises} sessions={sessions} />
+        )}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+// The coach reads training, diet, sleep, water, pantry and plans, so it
+// sits in its own tab rather than under Exercise.
+function CoachStack({ store }) {
+  return (
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName="AICoach"
+    >
+      <Stack.Screen name="AICoach" options={{ title: 'AI Coach' }}>
+        {() => <AICoachPage store={store} />}
+      </Stack.Screen>
+      <Stack.Screen name="CoachChat" options={{ title: 'Coach Chat' }}>
+        {() => <CoachChatPage store={store} />}
+      </Stack.Screen>
+      <Stack.Screen name="CoachBriefing" options={{ title: 'Coach Briefing' }}>
+        {() => (
+          <CoachBriefingPage
+            briefing={store.coachBriefing}
+            onChange={store.setCoachBriefing}
+          />
         )}
       </Stack.Screen>
     </Stack.Navigator>
@@ -772,6 +795,70 @@ function useAppStore() {
   };
 }
 
+// Raised circular tab button for the coach — it isn't a peer of the
+// other tabs (it reads all of them), so it doesn't look like one.
+function CoachTabButton({ onPress, accessibilityState }) {
+  const c = useThemeColors();
+  const focused = !!accessibilityState?.selected;
+  return (
+    <View style={coachTabStyles.slot}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          coachTabStyles.circle,
+          {
+            backgroundColor: focused ? c.accent : c.surface,
+            borderColor: c.text,
+            shadowColor: c.shadow,
+          },
+          pressed && { opacity: 0.8 },
+        ]}
+        hitSlop={6}
+      >
+        <Sparkles size={24} color={focused ? c.onAccent : c.text} />
+      </Pressable>
+      <Text
+        style={[
+          coachTabStyles.label,
+          { color: focused ? c.text : c.textMuted },
+        ]}
+      >
+        Coach
+      </Text>
+    </View>
+  );
+}
+
+const coachTabStyles = StyleSheet.create({
+  slot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    // Lifts the circle so it breaks the top edge of the bar.
+    marginTop: -18,
+  },
+  circle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  label: {
+    fontSize: 10,
+    fontFamily: 'Barlow Condensed',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: 2,
+  },
+});
+
 function TabNavigator({ store }) {
   const c = useThemeColors();
 
@@ -785,6 +872,8 @@ function TabNavigator({ store }) {
           backgroundColor: c.surface,
           borderTopWidth: 2,
           borderTopColor: c.text,
+          // Without this the raised circle gets clipped at the bar edge.
+          overflow: 'visible',
         },
         tabBarLabelStyle: {
           fontFamily: 'Barlow Condensed',
@@ -811,6 +900,16 @@ function TabNavigator({ store }) {
         }}
       >
         {() => <ExerciseStack store={store} />}
+      </Tab.Screen>
+      {/* Centre slot — the coach spans every other tab, so it gets the
+          most reachable position and a shape of its own. */}
+      <Tab.Screen
+        name="CoachTab"
+        options={{
+          tabBarButton: (props) => <CoachTabButton {...props} />,
+        }}
+      >
+        {() => <CoachStack store={store} />}
       </Tab.Screen>
       <Tab.Screen
         name="DietTab"
