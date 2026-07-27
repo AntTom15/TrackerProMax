@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { Search, X } from './Icons';
 import { MUSCLE_GROUPS } from '../lib/exerciseSeed';
 import type { Exercise, MuscleGroup } from '../lib/types';
@@ -88,7 +89,11 @@ export default function ExercisePicker({
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.list} nestedScrollEnabled>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.list}
+        nestedScrollEnabled
+      >
         {sorted.map((e) => {
           // Filtered muscle is only a secondary target for this exercise.
           const isSecondary = !!muscle && e.muscles[0] !== muscle;

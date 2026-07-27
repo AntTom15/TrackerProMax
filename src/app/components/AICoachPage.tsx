@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, Sparkles, Check } from './Icons';
@@ -171,7 +172,11 @@ export default function AICoachPage({ store }: AICoachPageProps) {
         </Pressable>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {showSettings && (
           <View style={styles.settingsCard}>
             <Text style={styles.settingsTitle}>Provider</Text>

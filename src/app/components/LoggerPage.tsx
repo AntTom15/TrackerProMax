@@ -7,6 +7,7 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { format, addDays, parseISO, isToday } from 'date-fns';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Droplets, Plus, X } from './Icons';
@@ -177,7 +178,11 @@ export default function LoggerPage({
       </Pressable>
 
       {/* Meals */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Water — tap cups to quick-add */}
         <View style={styles.waterSection}>
           <Pressable

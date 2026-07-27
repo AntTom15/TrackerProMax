@@ -7,6 +7,7 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import {
   ChevronLeft,
   List,
@@ -233,7 +234,11 @@ export default function FoodAdderPage({
       </ScrollView>
 
       {/* Food list */}
-      <ScrollView style={styles.foodList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.foodList}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Submit custom food — always first */}
         <Pressable
           onPress={() => navigation.navigate('FoodEntry' as never)}

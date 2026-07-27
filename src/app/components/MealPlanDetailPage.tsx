@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Search, Sparkles, X } from './Icons';
@@ -187,7 +188,11 @@ export default function MealPlanDetailPage({
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Macro hero */}
         <View style={styles.macroCard}>
           <View style={styles.macroHero}>

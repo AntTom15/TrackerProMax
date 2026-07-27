@@ -8,6 +8,7 @@ import {
   Pressable,
   Vibration,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import {
   format,
   parseISO,
@@ -223,7 +224,11 @@ export default function WorkoutTrackerPage({
           </Pressable>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          {...keyboardAwareScrollProps}
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.sessionHint}>
             Only sets marked ✓ are saved when you finish.
           </Text>
@@ -478,7 +483,11 @@ export default function WorkoutTrackerPage({
         <Text style={styles.title}>Tracker</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionHeader}>Start a workout</Text>
         {plans.length > 0 && (
           /* Selector + day list live in ONE box so it's clear the

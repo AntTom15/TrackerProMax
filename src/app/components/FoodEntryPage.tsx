@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { X, HelpCircle, Save } from './Icons';
 import { useNavigation } from '@react-navigation/native';
 import NumericInput from './components2/NumericInput';
@@ -495,6 +496,7 @@ export default function FoodEntryPage({ onSave }: FoodEntryPageProps) {
 
       {/* Scrollable form */}
       <ScrollView
+        {...keyboardAwareScrollProps}
         ref={scrollViewRef}
         style={styles.form}
         showsVerticalScrollIndicator={false}

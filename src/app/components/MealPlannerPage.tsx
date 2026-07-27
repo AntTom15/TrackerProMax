@@ -8,6 +8,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, isToday } from 'date-fns';
 import {
@@ -361,7 +362,11 @@ export default function MealPlannerPage({
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* ---- Day template / targets ---- */}
         <Pressable
           onPress={() => setSetupOpen((o) => !o)}

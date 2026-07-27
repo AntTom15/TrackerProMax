@@ -247,6 +247,25 @@ carb+lean breakfast, fatty dinner.
    covers steps. Needs EAS dev build + $99/yr Apple Developer (no Mac).
 6. Accounts/sync — LAST, only when multi-device or community voting goes real.
 
+## Keyboard handling (fixed 2026-07-26 — keyboard covered inputs)
+NO library: react-native-keyboard-controller needs a native build and
+would break Expo Go. Built-ins only.
+- `lib/keyboard.ts` → `keyboardAwareScrollProps`. Spread it on EVERY
+  vertical ScrollView that contains inputs (already done on 10 screens):
+  `automaticallyAdjustKeyboardInsets` (iOS only — Android does the same
+  at window level, so setting both double-compensates) plus
+  `keyboardShouldPersistTaps="handled"` (without it the first tap on a
+  button while typing is swallowed to dismiss the keyboard).
+  Never spread it on `horizontal` ScrollViews (chip rows) — wrong axis.
+- `app.json` → `android.softwareKeyboardLayoutMode: "resize"`.
+- CoachChatPage/CoachBriefingPage instead use KeyboardAvoidingView
+  (behavior 'padding' on iOS, undefined on Android). Correct as-is: RN
+  measures the view's own frame, so the bottom tab bar is already
+  accounted for and NO keyboardVerticalOffset is needed.
+- Gotcha when scripting this: `useRef<ScrollView>(null)` is a TS generic,
+  not a JSX tag — a naive `<ScrollView` regex corrupts it. Always
+  parse-check (babel) after bulk edits.
+
 ## Working conventions for agents
 - User likes: status updates while you work, being consulted on UX decisions
   ("where do u think X should go?"), concise answers, honest pushback with

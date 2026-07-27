@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, Check, Plus, Save, Timer, Trash, X } from './Icons';
 import ExercisePicker from './ExercisePicker';
@@ -206,7 +207,11 @@ export default function PlanMakerPage({
           </Pressable>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          {...keyboardAwareScrollProps}
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.fieldLabel}>Plan name</Text>
           <TextInput
             value={draft.name}
@@ -434,7 +439,11 @@ export default function PlanMakerPage({
         <Text style={styles.title}>Plan Maker</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* New plan input */}
         <View style={styles.newPlanRow}>
           <TextInput

@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
 } from 'react-native';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { ChevronLeft, Search, Plus } from './Icons';
@@ -159,7 +160,11 @@ export default function LogFoodPickerPage({
         />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {grouped.length === 0 && (
           <Text style={styles.emptyText}>
             {source === 'pantry'
