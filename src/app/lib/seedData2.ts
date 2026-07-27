@@ -451,7 +451,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'MacroMaster',
     upvotes: 591,
     downvotes: 11,
-    category: 'Lean Fish',
+    category: 'Shellfish',
     nutrients: { calories: 85, protein: 20.1, carbs: 0, fat: 0.5, fiber: 0, sugars: 0, satFat: 0.2, monoFat: 0.2, polyFat: 0.35, omega3: 250, omega6: 20, transFat: 0, cholesterol: 161, sodium: 111, vitaminA: 10, vitaminB1: 0.07, vitaminB2: 0.07, vitaminB3: 2.1, vitaminB5: 0.3, vitaminB6: 0.25, vitaminB7: 2, vitaminB9: 8, vitaminB12: 1.4, vitaminC: 0, vitaminD: 1, vitaminE: 1.4, vitaminK1: 0.1, vitaminK2: 0, choline: 115, calcium: 64, chloride: 110, chromium: 1, copper: 0.2, iodine: 41, iron: 0.4, magnesium: 27, manganese: 0.02, molybdenum: 1, phosphorus: 214, potassium: 350, selenium: 30, zinc: 1.3 },
   },
   {
@@ -462,7 +462,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'CarnivoreKing',
     upvotes: 193,
     downvotes: 18,
-    category: 'Lean Fish',
+    category: 'Shellfish',
     nutrients: { calories: 92, protein: 15.6, carbs: 3.1, fat: 1.4, fiber: 0, sugars: 0, satFat: 0.2, monoFat: 0.2, polyFat: 0.35, omega3: 500, omega6: 20, transFat: 0, cholesterol: 233, sodium: 70, vitaminA: 10, vitaminB1: 0.07, vitaminB2: 0.41, vitaminB3: 2.1, vitaminB5: 0.3, vitaminB6: 0.25, vitaminB7: 2, vitaminB9: 8, vitaminB12: 1.3, vitaminC: 0, vitaminD: 1, vitaminE: 0.6, vitaminK1: 0.1, vitaminK2: 0, choline: 65, calcium: 15, chloride: 110, chromium: 1, copper: 1.9, iodine: 40, iron: 0.4, magnesium: 27, manganese: 0.02, molybdenum: 1, phosphorus: 221, potassium: 350, selenium: 44.8, zinc: 1.5 },
   },
   {
@@ -473,7 +473,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'NutriFit_Pro',
     upvotes: 782,
     downvotes: 22,
-    category: 'Lean Fish',
+    category: 'Shellfish',
     nutrients: { calories: 79, protein: 16.2, carbs: 0.8, fat: 0.7, fiber: 0, sugars: 0, satFat: 0.2, monoFat: 0.2, polyFat: 0.35, omega3: 200, omega6: 20, transFat: 0, cholesterol: 112, sodium: 70, vitaminA: 113, vitaminB1: 0.07, vitaminB2: 0.07, vitaminB3: 2.1, vitaminB5: 0.3, vitaminB6: 0.25, vitaminB7: 2, vitaminB9: 8, vitaminB12: 3, vitaminC: 0, vitaminD: 1, vitaminE: 0.6, vitaminK1: 0.1, vitaminK2: 0, choline: 65, calcium: 15, chloride: 110, chromium: 1, copper: 0.6, iodine: 40, iron: 6.1, magnesium: 27, manganese: 0.02, molybdenum: 1, phosphorus: 200, potassium: 350, selenium: 44.8, zinc: 1.7 },
   },
   {
@@ -484,7 +484,7 @@ export const EXTRA_FOODS: Food[] = [
     uploadedBy: 'OffalKing',
     upvotes: 102,
     downvotes: 17,
-    category: 'Lean Fish',
+    category: 'Shellfish',
     nutrients: { calories: 69, protein: 12.1, carbs: 3.2, fat: 0.5, fiber: 0, sugars: 0, satFat: 0.2, monoFat: 0.2, polyFat: 0.35, omega3: 140, omega6: 20, transFat: 0, cholesterol: 24, sodium: 392, vitaminA: 10, vitaminB1: 0.07, vitaminB2: 0.07, vitaminB3: 2.1, vitaminB5: 0.3, vitaminB6: 0.25, vitaminB7: 2, vitaminB9: 8, vitaminB12: 1.4, vitaminC: 0, vitaminD: 1, vitaminE: 0.6, vitaminK1: 0.1, vitaminK2: 0, choline: 65, calcium: 15, chloride: 110, chromium: 1, copper: 0.05, iodine: 40, iron: 0.4, magnesium: 22, manganese: 0.02, molybdenum: 1, phosphorus: 334, potassium: 205, selenium: 12.8, zinc: 0.9 },
   },
   {
