@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import {
   NestableScrollContainer,
@@ -30,6 +32,18 @@ interface PantryPageProps {
   onReorderItem: (category: string, orderedIds: string[]) => void;
 }
 
+// Rail marker text: initials of each word, so "Fatty Muscle Meats" → FMM
+// and "Lean Fish" → LF. Distinct enough to aim at, narrow enough to sit
+// in a 30pt gutter.
+const railLabel = (category: string) =>
+  category
+    .split(/[\s&]+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+
 function DragHandle() {
   const { c, styles } = useThemedStyles(createStyles);
   return (
@@ -50,6 +64,42 @@ export default function PantryPage({
   const { c, styles } = useThemedStyles(createStyles);
   const [view, setView] = useState<'list' | 'icon'>('list');
   const navigation = useNavigation();
+
+  // ---- category jump rail ----
+  const scrollRef = useRef<any>(null);
+  // y offset of each category section, measured relative to the scroll
+  // content via onLayout.
+  const offsets = useRef<Record<string, number>>({});
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  const jumpTo = (category: string) => {
+    const y = offsets.current[category];
+    if (y == null) return;
+    setActiveCategory(category);
+    const node = scrollRef.current;
+    // Reanimated's animated wrapper has exposed the underlying node
+    // differently across versions, so try both shapes.
+    const scrollable =
+      typeof node?.scrollTo === 'function' ? node : node?.getNode?.();
+    // A little headroom so the heading isn't flush against the top edge.
+    scrollable?.scrollTo?.({ y: Math.max(0, y - 8), animated: true });
+  };
+
+  // NestableScrollContainer overrides onScroll for its own drag logic,
+  // so live tracking isn't available — but the scroll-END props pass
+  // through untouched, which is enough to keep the rail in sync.
+  const syncActive = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y + 24;
+    // Sorted by position, not by the order onLayout happened to fire.
+    const byPosition = Object.entries(offsets.current).sort(
+      (a, b) => a[1] - b[1]
+    );
+    let current: string | null = null;
+    for (const [cat, top] of byPosition) {
+      if (top <= y) current = cat;
+    }
+    if (current) setActiveCategory(current);
+  };
 
   const grouped = CATEGORY_ORDER.reduce<Record<string, Food[]>>(
     (acc, cat) => {
@@ -86,6 +136,10 @@ export default function PantryPage({
     },
     {}
   );
+
+  const categories = Object.keys(grouped);
+  // The rail only earns its screen space once there's somewhere to jump.
+  const showRail = view === 'list' && categories.length > 1;
 
   const renderFoodItem = ({ item, drag, isActive }: RenderItemParams<Food>) => (
     <ScaleDecorator>
@@ -157,8 +211,11 @@ export default function PantryPage({
 
       {/* Content */}
       <NestableScrollContainer
-        style={styles.content}
+        ref={scrollRef}
+        style={[styles.content, showRail && styles.contentWithRail]}
         showsVerticalScrollIndicator={false}
+        onMomentumScrollEnd={syncActive}
+        onScrollEndDrag={syncActive}
       >
         {view === 'list' ? (
           <View style={styles.listContainer}>
@@ -166,8 +223,17 @@ export default function PantryPage({
               <Text style={styles.emptyText}>Your pantry is empty.</Text>
             ) : (
               Object.entries(grouped).map(([category, foods]) => (
-                <View key={category} style={styles.categorySection}>
-                  <Text style={styles.categoryTitle}>{category}</Text>
+                <View
+                  key={category}
+                  style={styles.categorySection}
+                  onLayout={(e) => {
+                    offsets.current[category] = e.nativeEvent.layout.y;
+                  }}
+                >
+                  <View style={styles.categoryHeader}>
+                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Text style={styles.categoryCount}>{foods.length}</Text>
+                  </View>
                   <NestableDraggableFlatList
                     data={foods}
                     keyExtractor={(food) => food.id}
@@ -230,6 +296,43 @@ export default function PantryPage({
           </View>
         )}
       </NestableScrollContainer>
+
+      {/* Category rail — a tick per section, tap to jump */}
+      {showRail && (
+        <View style={styles.rail} pointerEvents="box-none">
+          {categories.map((category) => {
+            const active = activeCategory === category;
+            return (
+              <Pressable
+                key={category}
+                onPress={() => jumpTo(category)}
+                style={styles.railItem}
+                hitSlop={{ top: 2, bottom: 2, left: 10, right: 6 }}
+              >
+                {active && (
+                  <View style={styles.railLabelPill}>
+                    <Text style={styles.railLabelText} numberOfLines={1}>
+                      {category}
+                    </Text>
+                  </View>
+                )}
+                <View
+                  style={[styles.railTick, active && styles.railTickActive]}
+                >
+                  <Text
+                    style={[
+                      styles.railTickText,
+                      active && styles.railTickTextActive,
+                    ]}
+                  >
+                    {railLabel(category)}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {/* Add foods — full browsable list */}
       <Pressable
@@ -315,14 +418,101 @@ const createStyles = (c: ThemeColors) =>
   categorySection: {
     gap: 8,
   },
+  // Section headings were 10pt and easy to scroll straight past; they're
+  // now the loudest thing on the screen after the page title, with a
+  // thick rule underneath to break the list into obvious blocks.
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 3,
+    borderBottomColor: c.text,
+    paddingBottom: 5,
+    marginBottom: 8,
+  },
   categoryTitle: {
-    fontSize: 10,
-    letterSpacing: 0.8,
+    flex: 1,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: 0.5,
     color: c.text,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Barlow Condensed',
     textTransform: 'uppercase',
-    marginBottom: 4,
+  },
+  categoryCount: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: c.onAccent,
+    fontFamily: 'Barlow Condensed',
+    backgroundColor: c.accent,
+    borderWidth: 2,
+    borderColor: c.text,
+    borderRadius: 10,
+    minWidth: 26,
+    textAlign: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+  contentWithRail: {
+    // Keep rows clear of the rail gutter.
+    paddingRight: 46,
+  },
+  rail: {
+    position: 'absolute',
+    right: 6,
+    top: 90,
+    // Stop short of the FAB in the bottom-right corner.
+    bottom: 100,
+    justifyContent: 'center',
+    gap: 5,
+  },
+  railItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  railTick: {
+    minWidth: 30,
+    borderRadius: 8,
+    backgroundColor: c.cardAlt,
+    borderWidth: 2,
+    borderColor: c.border,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  railTickActive: {
+    backgroundColor: c.accent,
+    borderColor: c.text,
+  },
+  railTickText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: c.textMuted,
+    fontFamily: 'Barlow Condensed',
+    letterSpacing: 0.3,
+  },
+  railTickTextActive: {
+    color: c.onAccent,
+  },
+  // Full name of the section you're on, so the initials aren't a puzzle.
+  railLabelPill: {
+    borderRadius: 8,
+    backgroundColor: c.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    maxWidth: 150,
+  },
+  railLabelText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: c.onPrimary,
+    fontFamily: 'Barlow Condensed',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   foodList: {
     gap: 4,

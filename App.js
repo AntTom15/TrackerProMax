@@ -562,6 +562,12 @@ function useAppStore() {
     null
   );
 
+  // ---- Profile photo (uri into the app's document directory) ----
+  const [profilePhoto, setProfilePhoto] = usePersistedState(
+    STORAGE_KEYS.profilePhoto,
+    null
+  );
+
   // ---- Settings ----
   const [darkMode, setDarkMode] = usePersistedState(
     STORAGE_KEYS.darkMode,
@@ -717,6 +723,8 @@ function useAppStore() {
     deleteSession,
     activePlanId,
     setActivePlanId,
+    profilePhoto,
+    setProfilePhoto,
     darkMode,
     setDarkMode,
     restSeconds,
@@ -828,6 +836,8 @@ function TabNavigator({ store }) {
             onChangeWaterCup={store.setWaterCupOz}
             coachProfile={store.coachProfile}
             onChangeCoachProfile={store.updateCoachProfile}
+            profilePhoto={store.profilePhoto}
+            onChangeProfilePhoto={store.setProfilePhoto}
           />
         )}
       </Tab.Screen>

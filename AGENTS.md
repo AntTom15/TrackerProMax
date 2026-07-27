@@ -280,6 +280,28 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
 - The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
   Coach already owns recommendations and two advice surfaces compete.
 
+## Pantry category rail + profile photo (2026-07-26)
+- Pantry section headings went 10pt → 22pt/800 with a 3px rule and an
+  item-count badge; a jump rail sits in a right-hand gutter (one tick per
+  category, initials via `railLabel()`, active tick shows the full name).
+  Section positions come from `onLayout`; tapping calls `scrollTo` on the
+  NestableScrollContainer ref (it DOES forward refs — verified in the
+  library source).
+  **Constraint:** NestableScrollContainer overrides `onScroll` for its own
+  drag logic, so live scroll tracking is impossible — the rail syncs on
+  `onMomentumScrollEnd`/`onScrollEndDrag`, which DO pass through.
+  Active-category lookup sorts offsets by position, not onLayout order.
+- Profile photo: `lib/photo.ts` (expo-image-picker + expo-file-system).
+  The picker returns a CACHE uri the OS may clear, so the file is copied
+  into `documentDirectory/profile/` with a timestamped name (defeats the
+  Image cache) and the old one deleted. Returns a discriminated
+  `{status: 'ok'|'cancelled'|'denied'}` so denial can be told from cancel.
+  **SDK 54 moved expo-file-system to a File/Directory API — the stable
+  functional one is at `expo-file-system/legacy`** (verified present in
+  19.0.x). Shown on both the Profile identity card (tap to change/remove)
+  and the Overview header avatar; falls back to the "H" initial.
+- Requires `npm install` (expo-image-picker, expo-file-system added).
+
 ## Keyboard handling (fixed 2026-07-26 — keyboard covered inputs)
 NO library: react-native-keyboard-controller needs a native build and
 would break Expo Go. Built-ins only.

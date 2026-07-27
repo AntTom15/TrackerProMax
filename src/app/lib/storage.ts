@@ -28,6 +28,8 @@ export const STORAGE_KEYS = {
   mealPlan: `${PREFIX}mealPlan`,
   // Recipes: ingredients only — nutrients are always derived
   recipes: `${PREFIX}recipes`,
+  // Profile photo: a file uri in the app's document directory
+  profilePhoto: `${PREFIX}profilePhoto`,
   // AI Coach: provider settings + cached suggestions
   coachProvider: `${PREFIX}coachProvider`,
   coachClaudeKey: `${PREFIX}coachClaudeKey`,

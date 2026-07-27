@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -5,9 +6,13 @@ import {
   ScrollView,
   Pressable,
   Switch,
+  Image,
+  Alert,
 } from 'react-native';
 import { format, subDays } from 'date-fns';
 import { PenLine, Moon, Timer, Droplets, Dumbbell } from './Icons';
+import { keyboardAwareScrollProps } from '../lib/keyboard';
+import { deleteProfilePhoto, pickProfilePhoto } from '../lib/photo';
 import { useThemedStyles, ThemeColors } from '../lib/theme';
 import type { Food, LogEntry, WorkoutSession } from '../lib/types';
 import type { CoachGoal, CoachProfile, DietStyle } from '../lib/coach';
@@ -40,6 +45,8 @@ interface ProfilePageProps {
   onChangeWaterCup: (oz: number) => void;
   coachProfile: CoachProfile;
   onChangeCoachProfile: (patch: Partial<CoachProfile>) => void;
+  profilePhoto: string | null;
+  onChangeProfilePhoto: (uri: string | null) => void;
 }
 
 // Consecutive days (ending today) with at least one meal logged.
@@ -71,12 +78,54 @@ export default function ProfilePage({
   onChangeWaterCup,
   coachProfile,
   onChangeCoachProfile,
+  profilePhoto,
+  onChangeProfilePhoto,
 }: ProfilePageProps) {
   const { c, styles } = useThemedStyles(createStyles);
 
   const workouts = sessions.filter((s) => s.finishedAt !== null).length;
   const customFoods = foods.filter((f) => f.uploadedBy === 'You').length;
   const streak = logStreak(log);
+
+  // Photo picking is async (permission prompt + copy), so guard against
+  // a double tap launching two pickers.
+  const [pickingPhoto, setPickingPhoto] = useState(false);
+
+  const choosePhoto = async () => {
+    if (pickingPhoto) return;
+    setPickingPhoto(true);
+    try {
+      const res = await pickProfilePhoto(profilePhoto);
+      if (res.status === 'ok') onChangeProfilePhoto(res.uri);
+      else if (res.status === 'denied') {
+        Alert.alert(
+          'Photo access needed',
+          'Allow photo library access in Settings to set a profile photo.'
+        );
+      }
+    } finally {
+      setPickingPhoto(false);
+    }
+  };
+
+  const onAvatarPress = () => {
+    if (!profilePhoto) {
+      choosePhoto();
+      return;
+    }
+    Alert.alert('Profile photo', undefined, [
+      { text: 'Choose a new photo', onPress: choosePhoto },
+      {
+        text: 'Remove photo',
+        style: 'destructive',
+        onPress: () => {
+          deleteProfilePhoto(profilePhoto);
+          onChangeProfilePhoto(null);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   return (
     <View style={styles.container}>
@@ -88,14 +137,27 @@ export default function ProfilePage({
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Identity card */}
         <View style={styles.identityCard}>
-          <View style={styles.avatarWrap}>
+          <Pressable
+            onPress={onAvatarPress}
+            style={({ pressed }) => [
+              styles.avatarWrap,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
             <View style={styles.avatar}>
-              <Text style={styles.avatarInitials}>H</Text>
+              {profilePhoto ? (
+                <Image
+                  source={{ uri: profilePhoto }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarInitials}>H</Text>
+              )}
             </View>
-            <Pressable style={styles.avatarEdit}>
+            <View style={styles.avatarEdit}>
               <PenLine size={11} color={c.onPrimary} />
-            </Pressable>
-          </View>
+            </View>
+          </Pressable>
           <Text style={styles.name}>Heisenburg</Text>
           <Text style={styles.email}>phonecalculatorclock@gmail.com</Text>
 
@@ -429,6 +491,11 @@ const createStyles = (c: ThemeColors) =>
       borderColor: c.accent,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
     },
     avatarInitials: {
       fontSize: 34,

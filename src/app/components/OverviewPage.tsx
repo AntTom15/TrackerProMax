@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
@@ -27,6 +28,7 @@ interface OverviewPageProps {
     sleep: SleepEntry[];
     steps: StepsByDate;
     snapshotSteps: (patch: StepsByDate) => void;
+    profilePhoto: string | null;
   };
 }
 
@@ -217,7 +219,14 @@ export default function OverviewPage({ store }: OverviewPageProps) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarInitials}>H</Text>
+            {store.profilePhoto ? (
+              <Image
+                source={{ uri: store.profilePhoto }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarInitials}>H</Text>
+            )}
           </View>
           <View>
             <Text style={styles.branding}>Metamorphosis INC™</Text>
@@ -328,6 +337,11 @@ const createStyles = (c: ThemeColors) =>
     borderColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarInitials: {
     fontSize: 15,
