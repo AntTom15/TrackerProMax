@@ -309,13 +309,6 @@ export default function PantryPage({
                 style={styles.railItem}
                 hitSlop={{ top: 2, bottom: 2, left: 10, right: 6 }}
               >
-                {active && (
-                  <View style={styles.railLabelPill}>
-                    <Text style={styles.railLabelText} numberOfLines={1}>
-                      {category}
-                    </Text>
-                  </View>
-                )}
                 <View
                   style={[styles.railTick, active && styles.railTickActive]}
                 >
@@ -497,22 +490,6 @@ const createStyles = (c: ThemeColors) =>
   },
   railTickTextActive: {
     color: c.onAccent,
-  },
-  // Full name of the section you're on, so the initials aren't a puzzle.
-  railLabelPill: {
-    borderRadius: 8,
-    backgroundColor: c.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    maxWidth: 150,
-  },
-  railLabelText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: c.onPrimary,
-    fontFamily: 'Barlow Condensed',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
   },
   foodList: {
     gap: 4,
