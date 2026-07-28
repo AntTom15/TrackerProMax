@@ -288,9 +288,24 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
   version with a hard shadow read as too imposing. No negative margin,
   no shadow, no `overflow: visible` needed. AICoach/CoachChat/
   CoachBriefing moved out of ExerciseStack into `CoachStack`.
-- Exercise tile 4 is now **Progress** (`ProgressPage`): headline stats,
-  personal bests by Epley e1RM → ExerciseHistory, session list →
-  SessionDetail. Those two screens existed but had no front door.
+- Exercise tiles are now FIVE: Plan Maker, Tracker, **Steps**, **Body**,
+  Rest (the grid wraps 2/2/1, last tile centred). A short-lived
+  `ProgressPage` was tried in slot 4 and removed as redundant — the user
+  found it useless since the Tracker's calendar already reaches session
+  history. It sits in `_to_delete/` if ever wanted.
+  - `StepsPage`: 30-day bar history from the persisted step snapshots,
+    7/30-day averages and best day; calls `useSteps` so opening it
+    refreshes. This is the honest destination the Overview steps card
+    always wanted (it points at WorkoutTracker as a compromise — worth
+    repointing at 'Steps' now that it exists).
+  - `BodyPage` + `STORAGE_KEYS.bodyLog`: weight, body-fat %, and 8
+    optional tape measurements, one entry per date (re-logging replaces,
+    same as SleepEntry). **Saving a weight also writes
+    coachProfile.bodyWeightLb** — the coach uses it for protein/calorie
+    maths, so two sources of truth would drift.
+- SessionDetail exercise names are now Pressable → ExerciseHistory.
+  Previously per-lift history was reachable ONLY from inside a live
+  workout, so every path through the calendar or history list dead-ended.
 - **`PREPARED_CATEGORY` = 'Prepared & Restaurant'** (constants.ts) for
   takeout/fast food. A CATEGORY, not a flag, so the rule is visible and
   enforceable in one place:
