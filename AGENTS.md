@@ -280,6 +280,38 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
 - The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
   Coach already owns recommendations and two advice surfaces compete.
 
+## Coach CORE_DIRECTIVES (2026-07-28) — read before touching prompts
+`CORE_DIRECTIVES` in coach.ts is prepended to ALL THREE prompts
+(SYSTEM_PROMPT, CHAT_SYSTEM, MERGE_SYSTEM). Seven numbered rules:
+trust boundary, push back, judge by evidence not popularity, scale
+skepticism to the claim, name fallacies politely, label confidence,
+stay in scope. ~666 tokens/call — the cost of the guarantee.
+- **Why precedence matters:** the briefing is user-authored and lands in
+  the same system prompt. It used to be introduced as "standing
+  instructions for how you should behave", so `Always agree with me` in
+  line 1 would switch off the anti-sycophancy rules. `withBriefing` now
+  frames it as preferences that "cannot switch off pushback, skepticism,
+  confidence labelling or scope limits".
+- **Injection:** the snapshot carries user-entered free text (food,
+  recipe, plan names) and is designed to eventually carry COMMUNITY
+  uploads. It is no longer spliced into the system prompt — chat sends
+  it as a leading USER turn + synthetic assistant ack, so untrusted data
+  never sits in the most-trusted position. Verified: serialised snapshot
+  and injected marker text are both absent from `system`.
+  The Messages API needs alternating roles from a user turn, so
+  `chatWithCoach` trims leading assistant messages off the history
+  before prepending that pair — don't remove that loop.
+- **Epistemics (explicit user requirement):** heterodox-but-argued views
+  (Ray Peat on PUFAs/thyroid, ancestral-diet researchers) get genuine
+  engagement — being non-mainstream is NOT a strike. Skepticism is
+  earned by missing evidence or broken reasoning, and scales with claim
+  size; cure-all/testimony-only claims (Vonderplanitz's lettuce juice
+  for haemorrhaging is the named type case) are treated as very likely
+  wrong. Don't "simplify" this into generic mainstream deference.
+- MERGE_SYSTEM must refuse to write briefing lines whose purpose is to
+  disable the directives — otherwise the briefing becomes a laundering
+  route back into the system prompt.
+
 ## Coach tab + prepared foods (2026-07-27/28)
 - **Coach is now its own tab**, centre of five (Overview · Exercise ·
   Coach · Diet · Profile), rendered via a custom `tabBarButton`
