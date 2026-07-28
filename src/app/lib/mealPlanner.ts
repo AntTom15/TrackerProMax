@@ -29,6 +29,7 @@ import type {
   PlannerSettings,
 } from './types';
 import { NUTRIENT_SECTIONS } from './nutrients';
+import { PREPARED_CATEGORY } from './constants';
 
 // ---------------------------------------------------------------- defaults
 
@@ -257,6 +258,13 @@ const maxServingsFor = (food: Food): number => {
   }
   return MAX_SERVINGS;
 };
+
+// Restaurant/takeout food is never plannable — you can't cook from it,
+// and it isn't stocked. Checked on ingredient categories too, so a
+// recipe can't launder a Big Mac into a plan.
+const isPlannable = (food: Food): boolean =>
+  food.category !== PREPARED_CATEGORY &&
+  !(food.ingredientCategories ?? []).includes(PREPARED_CATEGORY);
 
 // A food passes a restriction whitelist only if its own category AND
 // every one of its ingredient categories are allowed. Without the second
@@ -535,7 +543,9 @@ export function generatePlan(
   const withRecs = !!settings.includeRecommendations;
   const pool = foods.filter(
     (f) =>
-      (pantrySet.has(f.id) || withRecs) && (f.nutrients?.calories ?? 0) > 0
+      (pantrySet.has(f.id) || withRecs) &&
+      (f.nutrients?.calories ?? 0) > 0 &&
+      isPlannable(f)
   );
 
   const candidates: Candidate[] = pool.map((food) => ({
@@ -895,6 +905,7 @@ export function suggestReplacement(
       if (pass === 0 && dayUsed.has(food.id)) continue;
       const inPantry = pantrySet.has(food.id);
       if (pantryOnly && !inPantry) continue;
+      if (!isPlannable(food)) continue;
       if (allowed && !allowed.has(food.category)) continue;
       if (requiredCat && food.category !== requiredCat) continue;
       const shape = macroShape(food);

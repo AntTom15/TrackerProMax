@@ -144,6 +144,7 @@ function DietStack({ store }) {
             foods={foods}
             pantryIds={pantryIds}
             onAddEntry={addLogEntry}
+            onAddCustomFood={addCustomFood}
           />
         )}
       </Stack.Screen>
@@ -807,15 +808,18 @@ function CoachTabButton({ onPress, accessibilityState }) {
         style={({ pressed }) => [
           coachTabStyles.circle,
           {
-            backgroundColor: focused ? c.accent : c.surface,
-            borderColor: c.text,
-            shadowColor: c.shadow,
+            // cardAlt is the app's "secondary fill" token — it reads as a
+            // quiet container distinct from the bar in both themes
+            // (genuinely lighter in dark mode; nothing is lighter than
+            // white in light mode).
+            backgroundColor: focused ? c.accent : c.cardAlt,
+            borderColor: focused ? c.text : c.border,
           },
           pressed && { opacity: 0.8 },
         ]}
         hitSlop={6}
       >
-        <Sparkles size={24} color={focused ? c.onAccent : c.text} />
+        <Sparkles size={19} color={focused ? c.onAccent : c.text} />
       </Pressable>
       <Text
         style={[
@@ -834,20 +838,17 @@ const coachTabStyles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    // Lifts the circle so it breaks the top edge of the bar.
-    marginTop: -18,
+    // Sits flush inside the bar — no lift, no hard shadow. The circle
+    // alone is enough to mark it as a different kind of destination.
+    paddingTop: 4,
   },
   circle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
   },
   label: {
     fontSize: 10,
@@ -872,8 +873,6 @@ function TabNavigator({ store }) {
           backgroundColor: c.surface,
           borderTopWidth: 2,
           borderTopColor: c.text,
-          // Without this the raised circle gets clipped at the bar edge.
-          overflow: 'visible',
         },
         tabBarLabelStyle: {
           fontFamily: 'Barlow Condensed',

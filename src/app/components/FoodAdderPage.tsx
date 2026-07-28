@@ -19,7 +19,7 @@ import {
   X,
 } from './Icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { CATEGORY_ORDER } from '../lib/constants';
+import { CATEGORY_ORDER, PREPARED_CATEGORY } from '../lib/constants';
 import type { Food, MyVotes, VoteDirection } from '../lib/types';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 
@@ -58,6 +58,9 @@ export default function FoodAdderPage({
   const q = query.toLowerCase();
   const searching = q.length > 0;
   const filtered = foods.filter((f) => {
+    // You can't stock a Chipotle bowl — prepared food is loggable but
+    // never pantry inventory.
+    if (f.category === PREPARED_CATEGORY) return false;
     const matchesQuery =
       !q ||
       f.name.toLowerCase().includes(q) ||
@@ -210,7 +213,7 @@ export default function FoodAdderPage({
           alignItems: 'center',
         }}
       >
-        {CATEGORY_ORDER.map((cat) => (
+        {CATEGORY_ORDER.filter((cat) => cat !== PREPARED_CATEGORY).map((cat) => (
           <Pressable
             key={cat}
             onPress={() => setCategory(category === cat ? null : cat)}

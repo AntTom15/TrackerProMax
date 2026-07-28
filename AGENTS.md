@@ -280,6 +280,33 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
 - The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
   Coach already owns recommendations and two advice surfaces compete.
 
+## Coach tab + prepared foods (2026-07-27/28)
+- **Coach is now its own tab**, centre of five (Overview · Exercise ·
+  Coach · Diet · Profile), rendered via a custom `tabBarButton`
+  (`CoachTabButton` in App.js): a 40pt circle, `c.cardAlt` when idle and
+  `c.accent` when focused. Deliberately FLUSH — an earlier raised
+  version with a hard shadow read as too imposing. No negative margin,
+  no shadow, no `overflow: visible` needed. AICoach/CoachChat/
+  CoachBriefing moved out of ExerciseStack into `CoachStack`.
+- Exercise tile 4 is now **Progress** (`ProgressPage`): headline stats,
+  personal bests by Epley e1RM → ExerciseHistory, session list →
+  SessionDetail. Those two screens existed but had no front door.
+- **`PREPARED_CATEGORY` = 'Prepared & Restaurant'** (constants.ts) for
+  takeout/fast food. A CATEGORY, not a flag, so the rule is visible and
+  enforceable in one place:
+  - `isPlannable()` in mealPlanner excludes it from the candidate pool
+    AND from `suggestReplacement` — checked on `ingredientCategories`
+    too, so a recipe can't launder a Big Mac into a plan. Verified with
+    the food deliberately stocked and recommendations ON.
+  - FoodAdder ("Add to Pantry") filters it out of both the list and the
+    category chips — you can't stock a Chipotle bowl.
+- **Quick add lives in the Logger's food picker** (`LogFoodPickerPage`),
+  not just the Pantry flow: name + serving + kcal/P/C/F, defaults to
+  PREPARED_CATEGORY, prefills from the search text, and logs the food
+  immediately on save. Needs `onAddCustomFood` (store.addCustomFood)
+  passed in. The old path (Pantry → FoodAdder → FoodEntry) was pure
+  friction for a food that will never live in the pantry.
+
 ## Coach context expansion + logged summaries (2026-07-26)
 - `buildCoachContext` previously exposed ONLY calories+protein averages,
   no plans and no pantry — so "which plan is better?" and "what should I

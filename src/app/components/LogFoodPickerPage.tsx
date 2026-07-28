@@ -11,9 +11,9 @@ import { keyboardAwareScrollProps } from '../lib/keyboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { ChevronLeft, Search, Plus } from './Icons';
-import { CATEGORY_ORDER } from '../lib/constants';
+import { CATEGORY_ORDER, PREPARED_CATEGORY } from '../lib/constants';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
-import type { Food, MealName } from '../lib/types';
+import type { Food, MealName, Nutrients } from '../lib/types';
 import NumericInput from './components2/NumericInput';
 
 interface LogFoodPickerPageProps {
@@ -25,6 +25,16 @@ interface LogFoodPickerPageProps {
     foodId: string;
     servings: number;
   }) => void;
+  // Creates a food in the database (not the pantry) and returns it, so
+  // one-off restaurant meals can be logged without a detour through the
+  // Pantry for something that will never live there.
+  onAddCustomFood: (draft: {
+    name: string;
+    category: string;
+    servingLabel: string;
+    servingWeightGrams?: number;
+    nutrients: Nutrients;
+  }) => Food;
 }
 
 const GRAMS_PER_OZ = 28.3495;
@@ -38,6 +48,7 @@ export default function LogFoodPickerPage({
   foods,
   pantryIds,
   onAddEntry,
+  onAddCustomFood,
 }: LogFoodPickerPageProps) {
   const { c, styles } = useThemedStyles(createStyles);
   const navigation = useNavigation();
@@ -112,6 +123,53 @@ export default function LogFoodPickerPage({
     logServings(food.id, Math.round(sv * 1000) / 1000);
   };
 
+  // ---- quick add (restaurant / takeout / anything not stocked) ----
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [qName, setQName] = useState('');
+  const [qServing, setQServing] = useState('');
+  const [qCals, setQCals] = useState('');
+  const [qProtein, setQProtein] = useState('');
+  const [qCarbs, setQCarbs] = useState('');
+  const [qFat, setQFat] = useState('');
+  // Defaults to Prepared & Restaurant — that's the case this exists for
+  // — but a home-made one-off can be filed properly.
+  const [qCategory, setQCategory] = useState(PREPARED_CATEGORY);
+
+  const openQuickAdd = () => {
+    setQName(query.trim());
+    setQServing('');
+    setQCals('');
+    setQProtein('');
+    setQCarbs('');
+    setQFat('');
+    setQCategory(PREPARED_CATEGORY);
+    setQuickOpen(true);
+  };
+
+  const num = (t: string) => {
+    const v = parseFloat(t);
+    return isFinite(v) && v >= 0 ? v : 0;
+  };
+  const quickValid = qName.trim().length > 0 && num(qCals) > 0;
+
+  const saveQuickAdd = () => {
+    if (!quickValid) return;
+    const food = onAddCustomFood({
+      name: qName.trim(),
+      category: qCategory,
+      servingLabel: qServing.trim() || '1 serving',
+      nutrients: {
+        calories: num(qCals),
+        protein: num(qProtein),
+        carbs: num(qCarbs),
+        fat: num(qFat),
+      },
+    });
+    setQuickOpen(false);
+    // Straight into the log — the whole point is one uninterrupted flow.
+    logServings(food.id, 1);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -165,6 +223,88 @@ export default function LogFoodPickerPage({
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Quick add — for takeout and one-offs that never belong in
+            the pantry. Always available, prefilled from the search. */}
+        {quickOpen ? (
+          <View style={styles.quickCard}>
+            <Text style={styles.quickTitle}>Quick add</Text>
+            <TextInput
+              value={qName}
+              onChangeText={setQName}
+              placeholder="e.g. Starbucks grande latte"
+              placeholderTextColor={c.textFaint}
+              style={styles.quickInput}
+            />
+            <TextInput
+              value={qServing}
+              onChangeText={setQServing}
+              placeholder="Serving — e.g. 1 grande, 1 burrito"
+              placeholderTextColor={c.textFaint}
+              style={styles.quickInput}
+            />
+            <View style={styles.quickMacros}>
+              {(
+                [
+                  ['kcal', qCals, setQCals],
+                  ['P', qProtein, setQProtein],
+                  ['C', qCarbs, setQCarbs],
+                  ['F', qFat, setQFat],
+                ] as const
+              ).map(([label, val, setter]) => (
+                <View key={label} style={styles.quickMacro}>
+                  <Text style={styles.quickMacroLabel}>{label}</Text>
+                  <NumericInput
+                    value={val}
+                    onChangeText={setter}
+                    placeholder="0"
+                    placeholderTextColor={c.textFaint}
+                    style={styles.quickMacroInput}
+                  />
+                </View>
+              ))}
+            </View>
+            <Pressable
+              onPress={() =>
+                setQCategory((cat) =>
+                  cat === PREPARED_CATEGORY ? 'Other' : PREPARED_CATEGORY
+                )
+              }
+              style={styles.quickCatRow}
+              hitSlop={4}
+            >
+              <Text style={styles.quickCatLabel}>Category</Text>
+              <Text style={styles.quickCatValue}>{qCategory}</Text>
+            </Pressable>
+            <Text style={styles.quickHint}>
+              Prepared & Restaurant food is logged and counted, but never
+              enters your pantry or a generated meal plan.
+            </Text>
+            <View style={styles.quickActions}>
+              <Pressable
+                onPress={() => setQuickOpen(false)}
+                style={styles.quickCancel}
+              >
+                <Text style={styles.quickCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={saveQuickAdd}
+                style={[styles.quickSave, !quickValid && { opacity: 0.4 }]}
+              >
+                <Text style={styles.quickSaveText}>Add & log</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable onPress={openQuickAdd} style={styles.quickAddBtn}>
+            <Plus size={14} color={c.textMuted} />
+            <Text style={styles.quickAddText}>
+              {query.trim()
+                ? `Quick add “${query.trim()}”`
+                : 'Quick add — restaurant or takeout'}
+            </Text>
+          </Pressable>
+        )}
+
         {grouped.length === 0 && (
           <Text style={styles.emptyText}>
             {source === 'pantry'
@@ -514,6 +654,130 @@ const createStyles = (c: ThemeColors) =>
       elevation: 3,
     },
     logBtnText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.onAccent,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    quickAddBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: c.text,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 12,
+    },
+    quickAddText: { fontSize: 13, color: c.textMuted, fontFamily: 'DM Sans' },
+    quickCard: {
+      borderRadius: 12,
+      backgroundColor: c.cardAlt,
+      borderWidth: 2,
+      borderColor: c.text,
+      padding: 12,
+      marginBottom: 12,
+    },
+    quickTitle: {
+      fontSize: 12,
+      letterSpacing: 0.8,
+      color: c.text,
+      fontWeight: '700',
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      marginBottom: 8,
+    },
+    quickInput: {
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: 13,
+      color: c.text,
+      fontFamily: 'DM Sans',
+      marginBottom: 8,
+    },
+    quickMacros: { flexDirection: 'row', gap: 6 },
+    quickMacro: { flex: 1, alignItems: 'center' },
+    quickMacroLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      marginBottom: 2,
+    },
+    quickMacroInput: {
+      width: '100%',
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 4,
+      paddingVertical: 7,
+      fontSize: 13,
+      color: c.text,
+      fontFamily: 'DM Sans',
+      textAlign: 'center',
+    },
+    quickCatRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      borderWidth: 2,
+      borderColor: c.border,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      marginTop: 10,
+    },
+    quickCatLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    quickCatValue: { fontSize: 12, color: c.text, fontFamily: 'DM Sans' },
+    quickHint: {
+      fontSize: 10,
+      color: c.textFaint,
+      fontFamily: 'DM Sans',
+      marginTop: 8,
+      lineHeight: 14,
+    },
+    quickActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 8,
+      marginTop: 10,
+    },
+    quickCancel: { paddingHorizontal: 12, paddingVertical: 8 },
+    quickCancelText: {
+      fontSize: 12,
+      color: c.textMuted,
+      fontFamily: 'Barlow Condensed',
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    quickSave: {
+      borderRadius: 10,
+      backgroundColor: c.accent,
+      borderWidth: 2,
+      borderColor: c.text,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    quickSaveText: {
       fontSize: 12,
       fontWeight: '800',
       color: c.onAccent,

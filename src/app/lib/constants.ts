@@ -21,6 +21,7 @@ export const CATEGORY_ORDER = [
   'Lean Organs',
   'Legumes & Soy',
   'Nuts & Seeds',
+  'Prepared & Restaurant',
   'Processed Plant Proteins',
   'Shellfish',
   'Starches & Tubers',
@@ -70,6 +71,17 @@ export const PLANT_CATEGORIES = [
 
 // Sunday-first, matching date-fns getDay().
 export const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+/**
+ * Restaurant / takeout / anything you ate but don't stock.
+ *
+ * It's a category rather than a flag so the rule is visible to the user
+ * and trivially enforceable: the meal generator blacklists it outright,
+ * the Pantry and "Add to Pantry" hide it (a Chipotle bowl isn't
+ * inventory), and it only surfaces where it's actually useful — picking
+ * food inside the Logger.
+ */
+export const PREPARED_CATEGORY = 'Prepared & Restaurant';
 
 // Max training days per workout plan (leaves room for alternates).
 export const MAX_PLAN_DAYS = 10;
