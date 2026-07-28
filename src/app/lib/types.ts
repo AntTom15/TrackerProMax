@@ -196,6 +196,30 @@ export interface MealPlan {
   days: PlannedDay[];
 }
 
+// ---------------- Body metrics ----------------
+
+// Tape measurements, in inches. Optional — most people track two or
+// three of these, not all of them.
+export type MeasurementKey =
+  | 'neck'
+  | 'shoulders'
+  | 'chest'
+  | 'arms'
+  | 'waist'
+  | 'hips'
+  | 'thighs'
+  | 'calves';
+
+// One weigh-in. Keyed by date; re-logging a date replaces it, matching
+// how SleepEntry behaves.
+export interface BodyEntry {
+  id: string;
+  date: string; // yyyy-MM-dd
+  weightLb?: number | null;
+  bodyFatPct?: number | null;
+  measurements?: Partial<Record<MeasurementKey, number>>;
+}
+
 // ---------------- Exercise ----------------
 
 export type ExerciseKind = 'strength' | 'cardio';

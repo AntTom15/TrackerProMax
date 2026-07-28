@@ -42,7 +42,8 @@ import MealPlanDetailPage from './src/app/components/MealPlanDetailPage';
 import MealPlanWeekSummaryPage from './src/app/components/MealPlanWeekSummaryPage';
 import RecipesPage from './src/app/components/RecipesPage';
 import LogPeriodSummaryPage from './src/app/components/LogPeriodSummaryPage';
-import ProgressPage from './src/app/components/ProgressPage';
+import StepsPage from './src/app/components/StepsPage';
+import BodyPage from './src/app/components/BodyPage';
 import ExercisePage from './src/app/components/ExercisePage';
 import PlanMakerPage from './src/app/components/PlanMakerPage';
 import WorkoutTrackerPage from './src/app/components/WorkoutTrackerPage';
@@ -254,8 +255,23 @@ function ExerciseStack({ store }) {
           />
         )}
       </Stack.Screen>
-      <Stack.Screen name="Progress" options={{ title: 'Progress' }}>
-        {() => <ProgressPage exercises={exercises} sessions={sessions} />}
+      <Stack.Screen name="Steps" options={{ title: 'Steps' }}>
+        {() => (
+          <StepsPage steps={store.steps} onSnapshot={store.snapshotSteps} />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Body" options={{ title: 'Body' }}>
+        {() => (
+          <BodyPage
+            bodyLog={store.bodyLog}
+            onAddEntry={store.addBodyEntry}
+            onDeleteEntry={store.deleteBodyEntry}
+            onChangeBodyWeight={(lb) =>
+              store.updateCoachProfile({ bodyWeightLb: lb })
+            }
+            profileWeightLb={store.coachProfile.bodyWeightLb}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Rest" options={{ title: 'Rest' }}>
         {() => (
@@ -679,6 +695,17 @@ function useAppStore() {
   const deleteSleepEntry = (entryId) =>
     setSleep((prev) => prev.filter((e) => e.id !== entryId));
 
+  // ---- Body log (one entry per date, like sleep) ----
+  const [bodyLog, setBodyLog] = usePersistedState(STORAGE_KEYS.bodyLog, []);
+  const addBodyEntry = (entry) =>
+    setBodyLog((prev) => [
+      { ...entry, id: `b${Date.now()}` },
+      // Re-logging a date replaces that day's entry.
+      ...prev.filter((e) => e.date !== entry.date),
+    ]);
+  const deleteBodyEntry = (entryId) =>
+    setBodyLog((prev) => prev.filter((e) => e.id !== entryId));
+
   // ---- AI Coach: provider settings + cached suggestions ----
   const [coachProvider, setCoachProvider] = usePersistedState(
     STORAGE_KEYS.coachProvider,
@@ -775,6 +802,9 @@ function useAppStore() {
     sleep,
     addSleepEntry,
     deleteSleepEntry,
+    bodyLog,
+    addBodyEntry,
+    deleteBodyEntry,
     coachProvider,
     setCoachProvider,
     coachClaudeKey,

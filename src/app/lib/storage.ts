@@ -30,6 +30,8 @@ export const STORAGE_KEYS = {
   recipes: `${PREFIX}recipes`,
   // Profile photo: a file uri in the app's document directory
   profilePhoto: `${PREFIX}profilePhoto`,
+  // Body weight / measurements log
+  bodyLog: `${PREFIX}bodyLog`,
   // AI Coach: provider settings + cached suggestions
   coachProvider: `${PREFIX}coachProvider`,
   coachClaudeKey: `${PREFIX}coachClaudeKey`,

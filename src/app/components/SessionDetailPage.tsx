@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, Check } from './Icons';
+import { ChevronLeft, ChevronRight, Check } from './Icons';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 import type { Exercise, WorkoutSession } from '../lib/types';
 
@@ -111,9 +111,26 @@ export default function SessionDetailPage({
                 const isCardio = ex?.kind === 'cardio';
                 return (
                   <View key={se.exerciseId} style={styles.exerciseBlock}>
-                    <Text style={styles.exerciseName}>
-                      {ex?.name ?? 'Unknown exercise'}
-                    </Text>
+                    {/* Tap through to the lift's full history — it was
+                        previously only reachable from inside a live
+                        workout, which made past sessions a dead end. */}
+                    <Pressable
+                      onPress={() =>
+                        (navigation as any).navigate('ExerciseHistory', {
+                          exerciseId: se.exerciseId,
+                        })
+                      }
+                      style={({ pressed }) => [
+                        styles.exerciseNameRow,
+                        pressed && { opacity: 0.6 },
+                      ]}
+                      hitSlop={4}
+                    >
+                      <Text style={styles.exerciseName}>
+                        {ex?.name ?? 'Unknown exercise'}
+                      </Text>
+                      <ChevronRight size={14} color={c.textMuted} />
+                    </Pressable>
                     {isCardio ? (
                       <Text style={styles.setLine}>
                         Duration: {se.durationMin ?? 0} min
@@ -256,12 +273,18 @@ const createStyles = (c: ThemeColors) =>
       padding: 10,
       marginBottom: 6,
     },
+    exerciseNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
     exerciseName: {
+      flex: 1,
       fontSize: 14,
       fontWeight: '600',
       color: c.text,
       fontFamily: 'DM Sans',
-      marginBottom: 4,
     },
     setRow: {
       flexDirection: 'row',

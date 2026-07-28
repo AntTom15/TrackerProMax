@@ -6,7 +6,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ClipboardList, Timer, Flame, Moon } from './Icons';
+import { ClipboardList, Timer, Footprints, Scale, Moon } from './Icons';
 import { ThemeColors, useThemedStyles } from '../lib/theme';
 
 const TILES: {
@@ -31,15 +31,18 @@ const TILES: {
     tint: 'tintLime',
   },
   {
-    // The coach moved to its own tab — it reads diet, sleep and pantry
-    // too, so filing it under Exercise undersold it. This slot now
-    // fronts the workout history that was previously only reachable by
-    // drilling into the Tracker.
-    id: 'Progress',
-    label: 'Progress',
-    Icon: Flame,
-    desc: 'History, PRs & est. 1RM',
+    id: 'Steps',
+    label: 'Steps',
+    Icon: Footprints,
+    desc: 'Daily step history',
     tint: 'tintPurple',
+  },
+  {
+    id: 'Body',
+    label: 'Body',
+    Icon: Scale,
+    desc: 'Weight, body fat & measurements',
+    tint: 'tintOrange',
   },
   {
     id: 'Rest',

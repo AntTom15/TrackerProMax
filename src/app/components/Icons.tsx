@@ -113,6 +113,14 @@ export const Sun = ({ size = 24, color = '#000' }: IconProps) => (
   <MaterialIcons name="wb-sunny" size={size} color={color} />
 );
 
+export const Scale = ({ size = 24, color = '#000' }: IconProps) => (
+  <MaterialIcons name="monitor-weight" size={size} color={color} />
+);
+
+export const Ruler = ({ size = 24, color = '#000' }: IconProps) => (
+  <MaterialIcons name="straighten" size={size} color={color} />
+);
+
 export const HelpCircle = ({ size = 24, color = '#000' }: IconProps) => (
   <MaterialIcons name="help" size={size} color={color} />
 );
