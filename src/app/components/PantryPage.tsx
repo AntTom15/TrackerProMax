@@ -6,6 +6,7 @@ import {
   Pressable,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  useWindowDimensions,
 } from 'react-native';
 import {
   NestableScrollContainer,
@@ -67,9 +68,13 @@ export default function PantryPage({
 
   // ---- category jump rail ----
   const scrollRef = useRef<any>(null);
+  const { height: windowHeight } = useWindowDimensions();
   // y offset of each category section, measured relative to the scroll
   // content via onLayout.
   const offsets = useRef<Record<string, number>>({});
+  // Section heights need to be state, not a ref: the trailing spacer is
+  // derived from the last one and has to re-render once it's measured.
+  const [heights, setHeights] = useState<Record<string, number>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const jumpTo = (category: string) => {
@@ -140,6 +145,27 @@ export default function PantryPage({
   const categories = Object.keys(grouped);
   // The rail only earns its screen space once there's somewhere to jump.
   const showRail = view === 'list' && categories.length > 1;
+
+  // Without trailing space the list stops scrolling the moment the last
+  // category's bottom reaches the screen bottom — so that category can
+  // never rise to the top, and the rail could neither jump to it nor
+  // ever mark it active. Reserve enough room for it to reach the top.
+  // ~0.72 of the window approximates the scroll viewport once the header
+  // and tab bar are taken out; NestableScrollContainer overrides
+  // onLayout for its own drag logic, so the real height isn't available.
+  const lastCategory = categories[categories.length - 1];
+  const viewport = Math.round(windowHeight * 0.72);
+  const tailSpace = Math.max(
+    24,
+    viewport - (heights[lastCategory] ?? 0)
+  );
+
+  const measureSection = (category: string, y: number, height: number) => {
+    offsets.current[category] = y;
+    setHeights((prev) =>
+      prev[category] === height ? prev : { ...prev, [category]: height }
+    );
+  };
 
   const renderFoodItem = ({ item, drag, isActive }: RenderItemParams<Food>) => (
     <ScaleDecorator>
@@ -226,9 +252,13 @@ export default function PantryPage({
                 <View
                   key={category}
                   style={styles.categorySection}
-                  onLayout={(e) => {
-                    offsets.current[category] = e.nativeEvent.layout.y;
-                  }}
+                  onLayout={(e) =>
+                    measureSection(
+                      category,
+                      e.nativeEvent.layout.y,
+                      e.nativeEvent.layout.height
+                    )
+                  }
                 >
                   <View style={styles.categoryHeader}>
                     <Text style={styles.categoryTitle}>{category}</Text>
@@ -257,6 +287,9 @@ export default function PantryPage({
               ))
             )}
 
+            {/* Lets the final category scroll up to the top, so the rail
+                can reach it and it isn't stuck under the add button. */}
+            {categories.length > 0 && <View style={{ height: tailSpace }} />}
           </View>
         ) : (
           /* Icon view */
