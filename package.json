@@ -6,7 +6,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios"
+    "ios": "expo start --ios",
+    "ship": "eas update --channel main --message"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

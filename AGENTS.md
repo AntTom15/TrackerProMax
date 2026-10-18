@@ -280,6 +280,33 @@ A recipe is a named ingredient set that behaves like ONE food everywhere.
 - The Diet tab's "Diet Recs" placeholder was REPLACED by Recipes — the AI
   Coach already owns recommendations and two advice surfaces compete.
 
+## Running on the phone without the laptop (EAS Update → Expo Go, 2026-10-18)
+User is on iPhone + Windows, no Apple Developer account, so a standalone
+install isn't possible for free. The free path: publish JS bundles with EAS
+Update and open them in **Expo Go**, which needs no dev server.
+- **`runtimeVersion` MUST stay `{ "policy": "sdkVersion" }`** (resolves to
+  `exposdk:54.0.0`). Expo Go rejects updates published under any other
+  policy (fingerprint, appVersion). `eas update:configure` may try to set
+  appVersion — revert it. Bump happens automatically on SDK upgrades.
+- Since May 12 2026 Expo Go only loads projects **owned by the signed-in
+  account** — Expo Go on the phone must be logged into the same Expo
+  account that publishes.
+- Publish: `npm run ship -- "what changed"` (= `eas update --channel main
+  --message`). SDK 55+ will also require `--environment`.
+- Phone link (permanent, always latest on `main`):
+  `https://qr.expo.dev/eas-update?projectId=<id>&runtimeVersion=exposdk:54.0.0&channel=main&slug=exp`
+  (`slug=exp` targets Expo Go rather than a dev build).
+- Desk workflow is unchanged: `npx expo start` for live reload; ship when
+  the phone copy should catch up. Updates apply on relaunch (may take two).
+- Free tier: 1,000 update MAUs / 100 GiB bandwidth; 15 iOS builds/mo if a
+  dev/preview build is ever made.
+- Upgrade path ($99/yr Apple Developer): EAS internal-distribution or
+  TestFlight build — real home-screen icon, own storage, unlocks HealthKit;
+  same `eas update` flow for JS changes.
+- OPEN QUESTION: whether Expo Go shares AsyncStorage between the
+  laptop-served and update-served copies of the project is unverified — and
+  the app has no data export yet, so don't assume logged data carries over.
+
 ## Coach CORE_DIRECTIVES (2026-07-28) — read before touching prompts
 `CORE_DIRECTIVES` in coach.ts is prepended to ALL THREE prompts
 (SYSTEM_PROMPT, CHAT_SYSTEM, MERGE_SYSTEM). Seven numbered rules:
